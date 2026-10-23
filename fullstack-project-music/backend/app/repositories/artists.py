@@ -32,7 +32,7 @@ def list_artists(db: Session, q: str | None, limit: int, offset: int) -> list[di
     return [get_artist(db, a.id) for a in db.scalars(stmt)]
 
 
-def get_stats(db: Session, artist_id:int) -> dict:
+def get_stats(db: Session, artist_id:int) -> dict | None:
     artist = db.get(models.Artist, artist_id)
     if artist is None:
         return None

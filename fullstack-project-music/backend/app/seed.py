@@ -11,7 +11,7 @@ SEED_PATH = Path(__file__).resolve().parent.parent / "data" / "seed.json"
 
 def flatten_catalog(catalog: dict) -> dict:
     rows = {"genres": [], "artists": [], "songs": [], "song_artists": []}
-    genre_ids, artist_ids, song_ids = {}, {}, {}
+    genre_ids, artist_ids = {}, {}
 
     def ensure(name, ids, table):
         if name not in ids:
