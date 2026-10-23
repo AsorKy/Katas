@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from app.schemas import PlaylistsCreate, PlaylistOut, PlaylistDetail, PlaylistAddSong
-
+from app.schemas import PlaylistAddSong, PlaylistDetail, PlaylistOut, PlaylistsCreate
 
 router = APIRouter(prefix="/playlists", tags=["playlists"])
 

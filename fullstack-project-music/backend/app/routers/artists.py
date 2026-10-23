@@ -1,19 +1,22 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.repositories import artists as artists_repo
-from app.schemas import ArtistsCreate, ArtistsOut, ArtistStats, SongsOut
-
 from app.repositories import songs as songs_repo
+from app.schemas import ArtistsCreate, ArtistsOut, ArtistStats, SongsOut
+from app.depends import current_user
 
 
 router = APIRouter(prefix="/artists", tags=["artists"])
 
 
-@router.post("", status_code=201,response_model=ArtistsOut)
-def create_artist(body: ArtistsCreate):
-    raise HTTPException(status_code=501, detail="Not implemented")
+@router.post("", status_code=201, response_model=ArtistsOut, dependencies=[Depends(current_user)])
+def create_artist(body: ArtistsCreate, db: Session = Depends(get_db)):
+    if artists_repo.get_by_name(db=db, name=body.name) is not None:
+        raise HTTPException(status_code=409, detail=f"Artist {body.name!r} already exists")
+    return artists_repo.create_artist(db=db, name=body.name)
+
 
 
 @router.get("", response_model=list[ArtistsOut])
@@ -27,6 +30,7 @@ def list_artists(
     if artists is None:
         raise HTTPException(status_code=404, detail="No artists found")
     return artists
+
 
 
 @router.get("/{artist_id}", response_model=ArtistsOut)

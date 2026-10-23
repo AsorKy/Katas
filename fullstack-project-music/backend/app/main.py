@@ -3,13 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.routers import genres
-from app.routers import artists
-from app.routers import songs
-from app.routers import playlists
-from app.routers import auth
-from app.routers import users
-
+from app.routers import artists, auth, genres, playlists, songs, users
 
 app = FastAPI(title="Music-api")
 

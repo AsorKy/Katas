@@ -5,8 +5,6 @@ from app.db import get_db
 from app.repositories import genres as genres_repo
 from app.schemas import GenreOut
 
-
-
 router = APIRouter(prefix="/genres", tags=["genres"])
 
 

@@ -1,6 +1,7 @@
-from typing import Literal
 from datetime import datetime
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class UserCreate(BaseModel):
@@ -93,3 +94,16 @@ class PlaylistAddSong(BaseModel):
     song_id: int
 
 
+class SongCreate(BaseModel):
+    title: str = Field(min_length=1)
+    duration_s: int = Field(gt=0)
+    genre_id: int
+    artists: list[SongArtistIn] = Field(min_length=1)
+
+    @field_validator("artists")
+    @classmethod
+    def no_duplicate_artists(cls, v):
+        ids = [a.artist_id for a in v]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Duplicate artist_id in artists")
+        return v

@@ -1,5 +1,5 @@
 """Lección 6: autenticación (registro, login, JWT, /me)."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from sqlalchemy import select
@@ -25,7 +25,7 @@ def auth_header(client):
 
 
 def make_token(sub, delta=timedelta(minutes=5), key=None):
-    exp = datetime.now(timezone.utc) + delta
+    exp = datetime.now(UTC) + delta
     return jwt.encode({"sub": str(sub), "exp": exp}, key or settings.secret_key, algorithm=settings.algorithm)
 
 
@@ -87,7 +87,7 @@ def test_token_carries_user_id_and_expiry(client):
     token = login(client).json()["access_token"]
     payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
     assert payload["sub"] == "1"
-    assert payload["exp"] > datetime.now(timezone.utc).timestamp()
+    assert payload["exp"] > datetime.now(UTC).timestamp()
 
 
 # ---------- /me ----------

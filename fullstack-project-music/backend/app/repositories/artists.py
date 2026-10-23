@@ -1,5 +1,5 @@
-from sqlalchemy import select, func, distinct
-from sqlalchemy.orm import Session 
+from sqlalchemy import distinct, func, select
+from sqlalchemy.orm import Session
 
 from app import models
 
@@ -24,12 +24,14 @@ def get_artist(db: Session, artist_id: int) -> dict | None:
     }
 
 
+
 def list_artists(db: Session, q: str | None, limit: int, offset: int) -> list[dict]:
     stmt = select(models.Artist)
     if q:
         stmt = stmt.where(models.Artist.name.ilike(f"%{q}%"))
     stmt = stmt.order_by(models.Artist.name).limit(limit).offset(offset)
     return [get_artist(db, a.id) for a in db.scalars(stmt)]
+
 
 
 def get_stats(db: Session, artist_id:int) -> dict | None:
@@ -55,3 +57,17 @@ def get_stats(db: Session, artist_id:int) -> dict | None:
         "song_count": song_count,
         "playlist_count": playlist_count
     }
+
+
+
+def get_by_name(db: Session, name: str) -> models.Artist | None:
+    return db.scalar(select(models.Artist).where(models.Artist.name == name))
+
+
+
+def create_artist(db: Session, name: str) ->dict:
+    artist = models.Artist(name=name)
+    db.add(artist)
+    db.commit()
+    db.refresh(artist)
+    return get_artist(db=db, artist_id=artist.id)

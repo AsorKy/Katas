@@ -1,4 +1,5 @@
 from collections import defaultdict
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -87,3 +88,26 @@ def get_song(db:Session, song_id: int) -> dict | None:
         "genre": genre,
         "artists": [{"artist_id": r.artist_id, "name": r.name, "role": r.role} for r in rows]
     }
+
+
+
+def genre_exists(db: Session, genre_id: int) -> bool:
+    return db.get(models.Genre, genre_id) is not None
+
+
+
+def existing_artist_ids(db: Session, ids:list[int]) -> set[int]:
+    return set(db.scalars(select(models.Artist.id).where(models.Artist.id.in_(ids))).all())
+
+
+
+def create_song(db: Session, title: str, duration_s: int, genre_id: int,
+                artists: list[tuple[int, str]]) -> int:
+    song = models.Song(title=title, duration_s=duration_s, genre_id=genre_id)
+    db.add(song)
+    db.flush()
+    db.add_all([
+        models.SongArtist(song_id=song.id, artist_id=a, role=r) for a, r in artists
+    ])
+    db.commit()
+    return song.id
