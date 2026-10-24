@@ -52,7 +52,8 @@ def test_declared_success_codes():
         assert code in responses, f"{method.upper()} {path} debe declarar {code}"
 
 
-def test_stubs_answer_501():
+
+#def test_stubs_answer_501():
     # Pendientes de las lecciones de auth y playlists. Borrar este test al terminarlas.
-    assert client.get("/playlists").status_code == 501
+    #assert client.get("/playlists").status_code == 501
     #assert client.get("/me").status_code == 501

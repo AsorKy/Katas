@@ -15,7 +15,7 @@ def create_song(body: SongCreate, db: Session = Depends(get_db)):
     try:
         return songs_service.create_song(db, body)
     except songs_service.RelatedNotFound as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
     
 
 @router.get("", response_model=list[SongsOut])
@@ -28,8 +28,8 @@ def list_songs(
     offset: int = Query(0, ge=0),
 ):
     songs = songs_repo.list_songs(db, genre_id, artist_id, q, limit, offset)
-    if songs is None or []:
-        raise HTTPException(status_code=404, detail="No songs found")
+    #if songs is None or []:
+    #    raise HTTPException(status_code=200, detail="No songs found")
     return songs
 
 

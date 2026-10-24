@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -6,6 +7,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.routers import artists, auth, genres, playlists, songs, users
 
 app = FastAPI(title="Music-api")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(genres.router)
 app.include_router(artists.router)

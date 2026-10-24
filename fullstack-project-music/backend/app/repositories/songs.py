@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app import models
 
 
-def _to_out(db:Session, songs: list[models.Song]) -> list[dict]:
+def to_out(db:Session, songs: list[models.Song]) -> list[dict]:
     if not songs:
         return []
     
@@ -63,7 +63,7 @@ def list_songs(
     if q:
         stmt = stmt.where(models.Song.title.ilike(f"%{q}%"))
     stmt = stmt.order_by(models.Song.id).limit(limit).offset(offset)
-    return _to_out(db, list(db.scalars(stmt)))
+    return to_out(db, list(db.scalars(stmt)))
 
 
 
@@ -94,6 +94,9 @@ def get_song(db:Session, song_id: int) -> dict | None:
 def genre_exists(db: Session, genre_id: int) -> bool:
     return db.get(models.Genre, genre_id) is not None
 
+
+def song_exists(db: Session, song_id: int) -> bool:
+    return db.get(models.Song, song_id) is not None
 
 
 def existing_artist_ids(db: Session, ids:list[int]) -> set[int]:

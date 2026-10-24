@@ -52,13 +52,6 @@ class SongArtistIn(BaseModel):
     role: Literal["main", "featured", "producer", "writer"]
 
 
-class SongCreate(BaseModel):
-    title: str = Field(min_length=1)
-    duration_s: int = Field(gt=0)
-    genre_id: int
-    artists: list[SongArtistIn] = Field(min_length=1)
-
-
 class SongsArtistOut(BaseModel):
     artist_id: int
     name: str
