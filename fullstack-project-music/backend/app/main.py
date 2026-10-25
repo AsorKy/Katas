@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.routers import artists, auth, genres, playlists, songs, users
+from app.routers import artists, auth, genres, playlists, songs, users, stats
 
 app = FastAPI(title="Music-api")
 
@@ -15,12 +15,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(genres.router)
-app.include_router(artists.router)
-app.include_router(songs.router)
-app.include_router(playlists.router)
-app.include_router(auth.router)
-app.include_router(users.router)
+
+router_list = [artists, auth, genres, playlists, songs, users, stats]
+for r in router_list:
+    app.include_router(r.router)
+
 
 @app.get("/health")
 def health():

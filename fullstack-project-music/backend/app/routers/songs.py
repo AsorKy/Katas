@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.repositories import songs as songs_repo
-from app.schemas import SongCreate, SongsOut
+from app.schemas import SongCreate, SongsOut, SimilarSong
 from app.depends import current_user
 from app.services import songs as songs_service
+from app.services import similarity as similarity_service
 
 router = APIRouter(prefix="/songs", tags=["songs"])
 
@@ -39,6 +40,13 @@ def get_song(song_id: int, db: Session = Depends(get_db)):
     if song is None:
         raise HTTPException(status_code=404, detail=f"Song {song_id} not found")
     return song
+
+
+@router.get("/{song_id}/similar", response_model=list[SimilarSong])
+def similar_song(song_id: int, limit:int = Query(5, ge=1, le=50), db: Session = Depends(get_db)):
+    if not songs_repo.get_song(db, song_id):
+        raise HTTPException(status_code=404, detail=f"Song {song_id} not fount")
+    return similarity_service.similar_songs(db, song_id, limit)
 
 
 

@@ -100,3 +100,17 @@ class SongCreate(BaseModel):
         if len(ids) != len(set(ids)):
             raise ValueError("Duplicate artist_id in artists")
         return v
+
+    
+class GenreStats(BaseModel):
+    genre_id: int
+    name: str
+    song_count: int
+    playlist_count: int
+    avg_duration_s: float
+
+
+class SimilarSong(BaseModel):
+    song_id: int
+    title: str
+    score: float

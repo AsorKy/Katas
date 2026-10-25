@@ -114,3 +114,14 @@ def create_song(db: Session, title: str, duration_s: int, genre_id: int,
     ])
     db.commit()
     return song.id
+
+
+
+def list_song_rows(db: Session) -> list[tuple[int, str, int]]:
+    stmt = select(models.Song.id, models.Song.title, models.Song.genre_id)
+    return [tuple(r) for r in db.execute(stmt)]
+
+
+def list_song_artist_links(db: Session) -> list[tuple[int, int]]:
+    stmt = select(models.SongArtist.song_id, models.SongArtist.artist_id)
+    return [tuple(r) for r in db.execute(stmt)]

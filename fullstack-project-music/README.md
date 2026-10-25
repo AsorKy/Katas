@@ -66,7 +66,8 @@ Los parámetros de ruta se llaman `{artist_id}`, `{song_id}` y `{playlist_id}`.
 | `DELETE /playlists/{playlist_id}/songs/{song_id}` | sí, dueño | — | 204 | 401, 404 |
 | `GET /health` | no | — | 200 `{"status": "ok"}` | — |
 
-**Fase 2:** `GET /stats/top-genres` (pandas) y `GET /songs/{song_id}/similar` (NumPy).
+| `GET /stats/top-genres` | no | `limit` (1–50, por defecto 5) | 200 `list[GenreStats]` | 422 |
+| `GET /songs/{song_id}/similar` | no | `limit` (1–50, por defecto 5) | 200 `list[SimilarSong]` | 404, 422 |
 
 Paginación: `limit` (por defecto 20, máximo 100) y `offset` (por defecto 0).
 `GET /artists` ordena por nombre; las demás listas, por id.
@@ -90,6 +91,10 @@ Paginación: `limit` (por defecto 20, máximo 100) y `offset` (por defecto 0).
 | `PlaylistOut` | `id`, `name`, `created_at` |
 | `PlaylistDetail` | `id`, `name`, `songs: list[SongsOut]` |
 | `PlaylistAddSong` | `song_id` |
+| `GenreStats` | `genre_id`, `name`, `song_count`, `playlist_count`, `avg_duration_s` |
+| `SimilarSong` | `song_id`, `title`, `score` (coseno, 4 decimales) |
+| `GenreStats` | `genre_id`, `name`, `song_count`, `playlist_count`, `avg_duration_s` |
+| `SimilarSong` | `song_id`, `title`, `score` (coseno, 4 decimales) |
 
 Notas sobre los schemas:
 - Los nombres van en plural (`ArtistsOut`, `SongsOut`, `PlaylistsCreate`…) para coincidir con el código.
@@ -131,10 +136,10 @@ fullstack-project-music/
 - [x] Entorno con uv y `/health`
 - [x] Contrato: schemas y rutas que responden 501 (`tests/test_contract.py`)
 - [x] Modelos, base de datos y semilla (aplanar el JSON anidado)
-- [ ] Autenticación
-- [ ] Canciones y artistas, con las consultas SQL
-- [ ] Playlists
-- [ ] pandas: `/stats/top-genres` · NumPy: `/songs/{id}/similar`
+- [x] Autenticación
+- [x] Canciones y artistas, con las consultas SQL
+- [x] Playlists
+- [x] pandas: `/stats/top-genres` · NumPy: `/songs/{id}/similar`
 - [ ] React: `SongList`, `LoginForm`
 - [ ] Dockerfile
 
