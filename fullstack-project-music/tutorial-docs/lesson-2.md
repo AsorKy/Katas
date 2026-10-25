@@ -50,6 +50,17 @@ README (contrato en prosa)  →  test_contract.py (contrato ejecutable, en rojo)
         →  schemas.py  →  routers con stubs 501  →  main.py (include_router)  →  verde
 ```
 
+![Ciclo del contrato primero: README, test_contract.py en rojo, schemas y stubs 501, test en verde y lecciones posteriores](diagramas/contrato-primero.svg)
+
+*Figura 2.1 · El ciclo "contrato primero": del README al test en verde, y cómo cada lección posterior lo respeta.*
+
+**Cómo leerlo.**
+
+- De arriba abajo es el orden de trabajo de esta lección: la tabla del README es la especificación (gris); `test_contract.py` la convierte en comprobaciones ejecutables y empieza en rojo; `schemas.py` y los routers con stubs, cableados en `main.py`, lo ponen en verde (azul = lo que escribes).
+- La columna de notas dice dónde se fija cada cosa: el `status_code` del decorador fija el código de éxito (201, 200, 204), `response_model` la forma del JSON de salida, el schema de entrada genera el 422 automático si el cuerpo no lo cumple y el `raise HTTPException(501)` marca que la ruta aún no hace nada.
+- El test no llama a las rutas: lee `/openapi.json`, que FastAPI genera a partir del código, y comprueba que las 18 rutas existen y que declaran sus códigos de éxito.
+- La flecha de retorno es el punto del método: en cada lección posterior solo cambia el cuerpo de la función (de 501 a código real). Decorador, schemas y rutas no se tocan, así que el test del contrato sigue en verde y avisa si alguien los rompe sin querer.
+
 ### 2.2 El README como especificación
 
 El README tiene estas secciones; las tres que importan para esta lección están en negrita:
@@ -960,9 +971,15 @@ Fuente: el resumen de la conversación (erratas del ejercicio del contrato, 📝
 - [x] README alineado con los nombres reales (plurales, `genres` calculado, `created_at`, 4 roles)
 - [x] Test de 10 preguntas corregido (uv, Pydantic, stubs `POST` y `GET`)
 - [x] `test_stubs_answer_501` retirado al implementar las rutas (hoy comentado)
+- [x] README: marcados Entorno, Contrato, Modelos, Autenticación, Canciones y artistas, Playlists y pandas/NumPy (verificado el 24 oct; `React` y `Dockerfile` siguen sin marcar)
 - [ ] Reescribir de memoria el stub de `GET /albums` (calentamiento prometido)
-- [ ] Arreglar el README: quitar la línea en blanco que separa las filas de `/stats/top-genres` y `/songs/{id}/similar` de la tabla, y eliminar las filas duplicadas de `GenreStats` / `SimilarSong`
-- [ ] (opcional) Retirar el import sin uso `GenreCreate` y decidir si se mantiene el stub extra `DELETE /auth/logout` (no está en el contrato)
+- [ ] Arreglar el README: quitar la línea en blanco que separa las filas de `/stats/top-genres` y `/songs/{id}/similar` de la tabla, y eliminar las filas duplicadas de `GenreStats` / `SimilarSong` (verificado el 24 oct: sigue pendiente; la línea en blanco está antes de `/stats/top-genres` y las filas duplicadas en las líneas 94–97 del README)
+- [x] Import sin uso de `GenreCreate` retirado (verificado el 24 oct: ningún router lo importa; la clase sigue definida en `schemas.py` sin usarse)
+- [ ] (opcional) Decidir si se mantiene el stub extra `DELETE /auth/logout` (sigue en `routers/auth.py` y no está en el contrato)
+
+## Diagramas de esta lección
+
+- [Figura 2.1 · El ciclo "contrato primero"](diagramas/contrato-primero.svg): del README al test en verde y cómo cada lección posterior respeta el contrato.
 
 ---
 

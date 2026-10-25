@@ -27,8 +27,6 @@ def list_artists(
     offset: int = Query(0, ge=0),
 ):
     artists = artists_repo.list_artists(db, q, limit, offset)
-    if artists is None:
-        raise HTTPException(status_code=404, detail="No artists found")
     return artists
 
 
@@ -46,8 +44,6 @@ def get_artist_songs(artist_id: int,db: Session = Depends(get_db)):
     if artists_repo.get_artist(db, artist_id) is None:
         raise HTTPException(status_code=404, detail=f"Artist {artist_id} not found.")
     songs = songs_repo.list_songs(db=db, artist_id=artist_id)
-    if songs is None:
-        raise HTTPException(status_code=404, detail=f"Artist {artist_id} songs not found.")
     return songs
 
 
@@ -57,8 +53,3 @@ def get_artist_stats(artist_id: int, db: Session = Depends(get_db)):
     if artist_stats is None:
         raise HTTPException(status_code=404, detail=f"Artist {artist_id} stats not found.")
     return artist_stats
-
-
-# @router.delete("/{artist_id}", status_code=204)
-# def delete_artist(artist_id: int):
-#     raise HTTPException(status_code=501, detail="Not Implemented")

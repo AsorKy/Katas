@@ -7,3 +7,7 @@ __pycache__/
 backend/data/*.db
 node_modules/
 dist/
+secrets.txt
+./secrets.txt
+frontend/node_modules/
+frontend/dist/

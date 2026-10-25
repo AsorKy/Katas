@@ -118,7 +118,7 @@ def create_song(db: Session, title: str, duration_s: int, genre_id: int,
 
 
 def list_song_rows(db: Session) -> list[tuple[int, str, int]]:
-    stmt = select(models.Song.id, models.Song.title, models.Song.genre_id)
+    stmt = select(models.Song.id, models.Song.title, models.Song.genre_id).order_by(models.Song.id)
     return [tuple(r) for r in db.execute(stmt)]
 
 

@@ -93,8 +93,7 @@ Paginación: `limit` (por defecto 20, máximo 100) y `offset` (por defecto 0).
 | `PlaylistAddSong` | `song_id` |
 | `GenreStats` | `genre_id`, `name`, `song_count`, `playlist_count`, `avg_duration_s` |
 | `SimilarSong` | `song_id`, `title`, `score` (coseno, 4 decimales) |
-| `GenreStats` | `genre_id`, `name`, `song_count`, `playlist_count`, `avg_duration_s` |
-| `SimilarSong` | `song_id`, `title`, `score` (coseno, 4 decimales) |
+
 
 Notas sobre los schemas:
 - Los nombres van en plural (`ArtistsOut`, `SongsOut`, `PlaylistsCreate`…) para coincidir con el código.
@@ -140,7 +139,7 @@ fullstack-project-music/
 - [x] Canciones y artistas, con las consultas SQL
 - [x] Playlists
 - [x] pandas: `/stats/top-genres` · NumPy: `/songs/{id}/similar`
-- [ ] React: `SongList`, `LoginForm`
+- [x] React: `SongList`, `LoginForm`
 - [ ] Dockerfile
 
 ## Criterio de "hecho"

@@ -2,7 +2,7 @@ import { useState } from "react"
 
 const API = "http://localhost:8000";
 
-export default function LoginFrom({onLogin}) {
+export default function LoginForm({onLogin}) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState(null);
@@ -38,7 +38,7 @@ export default function LoginFrom({onLogin}) {
             </label>
             <label>
                 Contraseña
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLenght={8}/>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8}/>
             </label>
             <button type="submit" disabled={submitting}>
                 {submitting ? "Entrando.." : "Entrar"}

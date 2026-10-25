@@ -951,6 +951,8 @@ Detalle pendiente que se señaló: `get_stats` declaraba `-> dict` pero devuelve
 
 Es el **problema N+1**. En entrevista suele salir como *"¿qué pasa si la página tiene 100 canciones?"*: el primer enfoque haría unas 125 consultas y el segundo seguiría en 2.
 
+> La **Figura 2** (en 3A.10) dibuja las dos estrategias lado a lado.
+
 > 📝 Precisión: antes de medir, la explicación decía "tres consultas por canción"; la medición real fue 25 para 20 canciones. Cuadra porque `db.get` reutiliza lo ya cargado en la sesión (identity map): la canción ya está en la sesión (0 consultas) y el género solo se consulta la primera vez que aparece, así que el coste real queda en ≈ 20 de artistas + unos 5 géneros distintos (cifra de los géneros: inferida, no medida por separado). Lo importante es que crece **linealmente con N**, mientras que el lote se queda en 2.
 
 **La idea, en tres partes:**
@@ -1642,6 +1644,18 @@ POST /songs  (Authorization: Bearer …, body JSON)
   response_model=SongsOut filtra y serializa → 201                 ┘
 ```
 
+![Orden de los controles de POST /songs: token, forma del cuerpo, existencia de género y artistas, y guardado; cada fallo sale por la derecha con su código](diagramas/de-donde-sale-cada-codigo.svg)
+
+*Figura 1 · De dónde sale cada código de estado de `POST /songs`.*
+
+**Cómo leerlo.**
+
+- Baja por la columna izquierda: es el orden real en que se evalúan los controles. Cada fallo sale por la derecha con su código y quién lo lanza.
+- El **401** y el **422** nacen antes de que se ejecute tu función. FastAPI resuelve primero las dependencias (`current_user`) y después valida el cuerpo; por eso con token ausente y cuerpo inválido sale **401**, no 422. 🔬 Comprobado el 24 oct con una aplicación FastAPI mínima, y los tests `test_create_song_requires_auth` y `test_create_song_invalid_body_is_422` fijan los dos casos por separado.
+- El **404** lo decide el servicio con una excepción propia (`RelatedNotFound`) y el router lo traduce a `HTTPException(404)`. Solo se llega aquí con un cuerpo ya válido: primero la forma, después la existencia en la base.
+- El **500** es el que no se captura a propósito: un `IntegrityError` sería un bug nuestro, no un error del cliente.
+- Es la regla de 3B.3 puesta en orden: cada error se detecta en la capa más barata y más cercana al cliente.
+
 #### Paso 2-A · `schemas.py`: rechazar artistas repetidos
 
 La clave `(song_id, artist_id)` no admite duplicados. Si el cliente manda el mismo artista dos veces, la base daría un `IntegrityError` y un 500. Se corta antes, en el schema (esqueleto dado):
@@ -2072,6 +2086,8 @@ Qué dejó construido esta mitad:
 - **Schemas (`schemas.py`)**: el "modelo de la API" (qué sale por JSON). **Models (`models.py`)**: el "modelo de la base". Son cosas distintas (por eso `ArtistsOut.genres` existe en el schema pero no en la tabla).
 - Por qué: se prueba cada capa por separado y se puede cambiar la base sin tocar los routers. (La capa de *servicio* entre ambas llega en la Parte B.)
 
+> El dibujo completo de las capas, ya con la de servicio de la Parte B, es la **Figura 3** de 3B.7: ahí se ve que el router puede llamar al repositorio directamente (lecturas simples) o pasar por el servicio (escrituras con reglas).
+
 ### 3A.2 `Depends(get_db)` y `dependency_overrides`
 
 `Depends(get_db)` hace que FastAPI llame a `get_db` por request, entregue la `Session` y la cierre al terminar la respuesta (es un generador con `yield`; ver `app/db.py`). En tests, `app.dependency_overrides[get_db] = override_get_db` sustituye la dependencia por una sesión de la base temporal: **mismo router, otra base**. Es la mejor respuesta de entrevista sobre testabilidad e inyección de dependencias.
@@ -2116,6 +2132,17 @@ Para `GET /songs?artist_id=2`: con `JOIN song_artists` la fila de la canción **
 - **Patrón:** (1) consulta de la página; (2) géneros con `Genre.id IN (...)`; (3) artistas con `SongArtist.song_id IN (...)`; agrupar con `defaultdict(list)` por `song_id`; montar los diccionarios de salida. `if not songs: return []` evita un `IN ()` vacío.
 - Para artistas (`list_artists`) se aceptó N+1 con límite 20 y se dijo que en la entrevista se explica cómo se resolvería (una sola consulta con `IN`).
 - Medición con contador de consultas: `event.listen(engine, "before_cursor_execute", hook)`.
+
+![N+1: una consulta por canción frente a un lote con IN; 25 consultas frente a 2 con 20 canciones](diagramas/n-mas-1.svg)
+
+*Figura 2 · El problema N+1 y el patrón con `IN`.*
+
+**Cómo leerlo.**
+
+- Las dos columnas empiezan con la misma consulta de la lista (20 canciones). Lo que cambia es cómo se obtienen las relaciones (género y artistas).
+- **Izquierda:** se llama a `get_song` una vez por canción y cada llamada dispara sus propias consultas. El coste crece con N. Medido con 20 canciones: **25 consultas**, sin contar la de la lista.
+- **Derecha:** una consulta de géneros con `IN` y otra de artistas con `IN` para toda la página, y se agrupan en Python por `song_id`. Medido: **2 consultas**, y no depende de N.
+- Los 25 no son "tres por canción": `db.get` reutiliza lo que la sesión ya tiene cargado (ver la precisión 📝 de 2A.6).
 
 ### 3A.11 `DISTINCT`: dos cosas distintas y "el JOIN multiplica filas"
 
@@ -2205,6 +2232,8 @@ En ambos casos `current_user` corre **antes** de tu función (FastAPI resuelve l
 
 La idea: **cada error se detecta en la capa más barata y más cercana al cliente**, y las restricciones de la base quedan como red de seguridad, no como mecanismo normal.
 
+> La **Figura 1** (en 2B.4) ordena estas defensas en el tiempo para `POST /songs`: primero el token (401), luego la forma del cuerpo (422), después la existencia de género y artistas (404) y por último el guardado.
+
 ### 3B.4 `@field_validator` (Pydantic v2): cómo sabe qué campo revisar
 
 Pregunta del usuario (17:39): *"¿cómo `field_validator` sabe que debes checar `artists`? ¿Y cómo `classmethod` es necesario? Nunca había visto ese decorador. Supongo que lo que valida es precisamente el campo `artists` y la validación se hace in place dentro de esa solicitud."* Su suposición era **correcta**.
@@ -2290,6 +2319,18 @@ Probado: funciona igual (mismo `ValueError` convertido en error de validación).
 | Router | `routers/songs.py` | HTTP: status codes, `HTTPException`, `Depends`, auth | SQL, reglas | `raise HTTPException(...)` |
 | Service | `services/songs.py` | reglas de negocio (¿existe el género?) | HTTP, FastAPI, SQL concreto | `raise RelatedNotFound(...)` (su propia excepción) |
 | Repository | `repositories/songs.py` | SQL / SQLAlchemy | reglas, HTTP | devuelve `None` / `bool` / `set` |
+
+![Capas del backend: el cliente HTTP llama al router, que usa el servicio, que usa el repositorio, que lee y escribe los modelos en SQLite](diagramas/capas-router-servicio-repositorio.svg)
+
+*Figura 3 · Router, servicio y repositorio: quién llama a quién y qué devuelve cada capa.*
+
+**Cómo leerlo.**
+
+- Las flechas de la izquierda **bajan**: cada capa llama solo a la de debajo (`routers/songs.py` importa `services/songs.py`, que importa `repositories/songs.py`). Nunca al revés.
+- Las de la derecha **suben**: cada capa devuelve algo que la de arriba sabe interpretar. El repositorio devuelve datos (`dict`, `None`, `bool`, `set`); el servicio devuelve datos o lanza su propia excepción (`RelatedNotFound`); y solo el router lo convierte en HTTP: `HTTPException` con su código, o el JSON de `response_model`.
+- `schemas.py` (la forma de lo que entra y sale) y `depends.py` / `db.py` (la sesión y el usuario actual) cuelgan del router, que es quien recibe la petición.
+- La flecha punteada son las **lecturas simples** (`GET /songs`, `GET /songs/{id}`…): no hay reglas de negocio que comprobar, así que el router llama directo al repositorio. El servicio solo aparece cuando hay reglas que no son ni SQL ni HTTP.
+- Qué se rompe si se mezclan: SQL dentro del router no se puede probar sin HTTP; un `HTTPException` dentro del servicio lo ata a FastAPI y ya no se reutiliza en un script ni en una tarea en segundo plano.
 
 Reglas del diseño (las que se verbalizaron en clase):
 
@@ -2567,10 +2608,20 @@ Conseguido:
 - [x] `list_songs` devuelve `200 []` cuando no hay resultados
 - [x] Suite en verde al cierre de cada mitad (46 passed y 92 passed, ambas con 1 skipped)
 
-Pendiente (limpieza, tuya):
+Verificado el 24 oct sobre el repo:
 
-- [ ] Borrar las dos líneas comentadas del 404 en `list_songs` (`routers/songs.py`)
-- [ ] Borrar las ramas inertes `if x is None` en `list_artists` y `get_artist_songs` (nunca se ejecutan) y corregir el `-k genres` de la docstring de `test_catalog_api.py`
-- [ ] Marcar `Canciones y artistas` en el checklist del README y ampliar las filas de `POST /artists` (409) y `POST /songs` (422)
-- [ ] Comprobar que el `.gitignore` existe y cubre `.venv/`, `__pycache__/` y `backend/data/*.db`
-- [ ] Hacer el commit (incluye `pyproject.toml` y `uv.lock`)
+- [x] Código muerto borrado: ya no quedan las líneas comentadas de `list_songs` ni las ramas `if x is None` de `list_artists` y `get_artist_songs`
+- [x] `secrets.txt` está en `.gitignore` (que además cubre `.venv`, `__pycache__/` y `backend/data/*.db`)
+- [x] README: `Canciones y artistas` marcado en el checklist, y la fila de `POST /songs` ya incluye el 404 y el 422
+
+Pendiente:
+
+- [ ] Añadir el `409` a la fila de `POST /artists` del README (hoy dice `401, 422`, pero un nombre repetido devuelve 409)
+- [ ] Corregir el `-k genres` de la docstring de `tests/test_catalog_api.py` (también selecciona un test de artistas)
+- [ ] Confirmar el commit (incluye `pyproject.toml` y `uv.lock`)
+
+## Diagramas de esta lección
+
+- [Figura 1 · De dónde sale cada código de estado de `POST /songs`](diagramas/de-donde-sale-cada-codigo.svg) (sección 2B.4)
+- [Figura 2 · El problema N+1 y el patrón con `IN`](diagramas/n-mas-1.svg) (sección 3A.10)
+- [Figura 3 · Router, servicio y repositorio](diagramas/capas-router-servicio-repositorio.svg) (sección 3B.7)

@@ -469,6 +469,18 @@ Estado al empezar: tu suite limpia (**91 passed, 1 skipped**), ruff sin avisos, 
 - **409** si la canción ya está en la playlist.
 - **404** si la playlist es ajena o no existe (ya lo resuelve `owned_playlist`).
 
+![Recorrido de POST /playlists/{id}/songs: token, playlist propia, cuerpo, canción existente y canción repetida, con el código de estado de cada fallo](diagramas/peticion-agregar-cancion.svg)
+
+*Figura 1 · Por dónde pasa `POST /playlists/7/songs` y dónde nace cada código de estado.*
+
+**Cómo leerlo.**
+
+- Se lee de arriba abajo. La petición se detiene en la **primera** caja que falla, y la caja ámbar de esa fila es la respuesta. Si las pasa todas, llega al `201`.
+- **Zona "router y dependencias":** `bearer → current_user` y `owned_playlist` son dependencias (`Depends`), y FastAPI las ejecuta *antes* de mirar el cuerpo. Por eso el orden real es **401 → 404 → 422**: con un cuerpo inválido y sin token recibes 401, y con un cuerpo inválido en una playlist ajena recibes 404. 📝 *Lo comprobé al redactar esta figura con un FastAPI mínimo; no se hizo en clase.*
+- **Zona "servicio":** `services.add_song` hace las dos comprobaciones de negocio. No devuelve códigos HTTP: lanza `SongNotFound` y `AlreadyInPlaylist`, y el `try/except` del router las traduce a 404 y 409. Las consultas (`song_exists`, `song_in_playlist`) son funciones de repositorio, pero las llama el servicio.
+- **Zona "repositorio":** `add_song` solo hace SQL: calcula `position = max + 1`, inserta y hace `commit`. La caja punteada recuerda que la PK `(playlist_id, song_id)` es la red de seguridad si dos peticiones pasan el `if` a la vez (ver 3.8). Hoy ese caso no se traduce a 409 y acabaría en un error del servidor.
+- Los dos 404 se parecen pero nacen en sitios distintos. El de `owned_playlist` habla de la **playlist** y sale de una dependencia. El de `SongNotFound` habla de la **canción** y sale del servicio; el test exige que su mensaje incluya el id (`"99" in message`).
+
 Hay **dos reglas de negocio** (existe, no está repetida) → **capa de servicio**, como `services/songs.py`: el router solo traduce a HTTP.
 
 **A. `repositories/songs.py`**: `song_exists(db, song_id) -> bool`, copia de `genre_exists` con `models.Song`:
@@ -832,6 +844,18 @@ Observaciones sobre las diferencias con la referencia (no son errores):
 - Dónde se aplica: `GET /playlists` filtra por `owner_id`; detalle, añadir y quitar pasan por `owned_playlist`.
 - Matiz de diseño: el `playlist_count` de un artista **sí** cuenta playlists de todos los usuarios, pero es un agregado que no revela de quién son (README, reglas transversales).
 
+![Dos peticiones del usuario B, una a la playlist 7 (de A) y otra a la 999 (inexistente), terminan en el mismo 404](diagramas/playlist-ajena-404.svg)
+
+*Figura 2 · Una playlist ajena y una inexistente son indistinguibles.*
+
+**Cómo leerlo.**
+
+- Arriba, el estado de la base: la playlist 7 existe y es de A, y la 999 no existe. El usuario B, con token válido, pide las dos.
+- `owned_playlist` no pregunta primero "¿existe?" y después "¿es mía?". Hace **una sola consulta** con las dos condiciones (`WHERE id = :playlist_id AND owner_id = :user_id`). Para esa consulta, la playlist de otro simplemente no existe: en los dos casos devuelve cero filas y `None`.
+- Con el mismo `None` solo cabe una respuesta: el mismo 404 con el mismo formato de error. El mensaje (`Playlist {id} not found for user {user.id}`) repite lo que mandó el cliente, nunca algo que dependa de si el id existe.
+- El recuadro rojo es lo que **no** hacemos. Con un `if owner != user: 403`, el 7 respondería 403 y el 999 respondería 404, y cualquiera podría recorrer ids para averiguar cuáles existen (enumeración de recursos).
+- Qué se rompe si falta el filtro por dueño: la mutación "sin filtrar por dueño" hace fallar 3 tests (ver 3.2).
+
 ### 3.3 Identidad: `Depends(current_user)` como **parámetro** frente a `dependencies=[...]`
 
 - `dependencies=[Depends(current_user)]` en el decorador (usado en `POST /artists`, `POST /songs`): solo exige que haya sesión válida; **no te entrega** el usuario.
@@ -885,6 +909,18 @@ También: en un test que falla con "1 de 4", pregunta *qué tiene de distinto es
 - Con la playlist vacía, `func.max(...)` devuelve `None` (no `0`); por eso `(last or 0) + 1`.
 - Quitar una canción deja un **hueco** y no renumera: `[1,2,3]` → quito la 2 → `[1,3]`. Con `count + 1 = 3` la nueva colisionaría con la 3. Con `max + 1 = 4`, no.
 - El detalle ordena por `position`, no por id de canción: el orden es el que eligió el usuario (añadir 3, 1, 4 → `S3, S1, S4`).
+
+![Tabla playlist_songs con tres filas de ejemplo y tres casos: añadir una canción nueva, añadir una repetida y quitar una](diagramas/playlist-songs-tabla.svg)
+
+*Figura 3 · `playlist_songs`: clave primaria compuesta y `position`.*
+
+**Cómo leerlo.**
+
+- La **clave primaria** es el par `(playlist_id, song_id)`, las dos columnas en azul. Una misma canción no puede aparecer dos veces en la misma playlist, pero sí en otras. `position` y `added_at` son atributos de la relación.
+- **Añadir la 40:** `position = max(1, 2, 3) + 1 = 4`. En el código es `(last or 0) + 1`: si la playlist está vacía, `max` da `None` y la primera canción queda en 1.
+- **Añadir la 5 otra vez:** el servicio ve que `(7, 5)` ya existe y lanza `AlreadyInPlaylist` (409). Si dos peticiones lo intentaran a la vez, la PK rechazaría la segunda inserción.
+- **Quitar la 12:** `remove_song` borra solo esa fila y **no renumera**, así que quedan las posiciones 2 y 3. La siguiente canción usa `max + 1 = 4`. Con `count + 1` valdría 3 y repetiría una posición existente; como no hay `UNIQUE (playlist_id, position)`, no daría error, pero el orden quedaría ambiguo.
+- Los números y las horas son un ejemplo inventado para el dibujo.
 
 ### 3.10 `func.max` y consultas escalares
 
@@ -1032,15 +1068,28 @@ Detalles menores: variable `smtm` (typo de `stmt`), `test_stubs_answer_501` come
 
 ## 7. Checklist / estado
 
+Conseguido en clase:
+
 - [x] `POST /playlists` y `GET /playlists` (solo las mías)
 - [x] `owned_playlist` (dependencia con parámetro de ruta) y `GET /playlists/{id}`
 - [x] `POST /playlists/{id}/songs` con servicio (404 canción, 409 repetida, posición `max+1`)
 - [x] `DELETE /playlists/{id}/songs/{song_id}` (204 / 404)
 - [x] 24 tests de playlists en verde; suite completa **115 passed, 1 skipped** (119 con CORS)
 - [x] Ruff (`F,E9`) limpio
-- [x] README: `- [x] Playlists`
-- [x] Arreglados: 422→404 en `POST /songs`, `SongCreate` duplicada, `test_stubs_answer_501`
-- [ ] (Opcional) borrar del todo el test de stubs comentado de `test_contract.py`
-- [ ] (Opcional) renombrar `get_playlists` → `get_playlist` en el repositorio y `smtm` → `stmt`
-- [ ] (Opcional, extensión) capturar `IntegrityError` en `add_song` y traducirlo a 409
+- [x] Arreglados: 422→404 en `POST /songs`, `SongCreate` duplicada y `test_stubs_answer_501` (comentado en `test_contract.py`, no borrado)
+
+Estado del repositorio verificado el 24 de octubre:
+
+- [x] README: `- [x] Playlists` marcado en el checklist (línea 141)
+- [x] `secrets.txt` ya está en el `.gitignore` (aparece también como `./secrets.txt`)
+- [ ] README: borrar las filas duplicadas de `GenreStats` y `SimilarSong` en la tabla de schemas (las líneas 96 y 97 repiten las 94 y 95)
+- [ ] (Opcional) borrar del todo el test de stubs comentado: sigue en `test_contract.py` (líneas 56 a 59)
+- [ ] (Opcional) renombrar `get_playlists` → `get_playlist` en el repositorio y `smtm` → `stmt`: siguen con los nombres antiguos
+- [ ] (Opcional, extensión) capturar `IntegrityError` en `add_song` y traducirlo a 409: hoy `add_song` hace `commit` sin `try/except`
 - [ ] Repasar más adelante: dependencias con `yield` y caché por petición, PK compuesta frente a carrera, 404 vs 403 (los conceptos que dijiste que validarías más adelante)
+
+## Diagramas de esta lección
+
+- [Figura 1 · Recorrido de `POST /playlists/{id}/songs`](diagramas/peticion-agregar-cancion.svg): dónde nace cada código de estado (sección 2.8).
+- [Figura 2 · Playlist ajena frente a inexistente](diagramas/playlist-ajena-404.svg): por qué 404 y no 403 (sección 3.2).
+- [Figura 3 · Tabla `playlist_songs`](diagramas/playlist-songs-tabla.svg): PK compuesta, `position` y huecos (sección 3.9).

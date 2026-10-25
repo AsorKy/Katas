@@ -419,6 +419,18 @@ Es una carpeta con un intérprete de Python y sus propios paquetes. Cada proyect
 
 Diferencia clave que se explicó: **`pyproject.toml` es lo que pides** ("quiero `fastapi` versión 0.159.1 o superior") y **`uv.lock` es lo que obtuviste** (versión exacta de cada paquete y de sus dependencias, con hash). Lo primero lo escribes tú; lo segundo lo escribe `uv`.
 
+![Diagrama de cómo se relacionan pyproject.toml, uv.lock, .python-version y .venv con los comandos uv add, uv sync y uv run](diagramas/entorno-uv.svg)
+
+*Figura 1.1 · Del `pyproject.toml` al `.venv`: qué archivo declara, cuál fija y cuál se instala.*
+
+**Cómo leerlo.**
+
+- Los tres cuadros azules son los archivos que van a git: `pyproject.toml` (lo que pides), `.python-version` (qué Python) y `uv.lock` (lo que `uv` resolvió: versiones exactas y hashes).
+- `uv add [--dev]` edita `pyproject.toml` y actualiza `uv.lock`; `uv sync` instala en `.venv` exactamente lo que dice el lock. El cuadro gris punteado es `.venv/`: se puede borrar y recrear con `uv sync`, por eso no va a git.
+- `uv run ...` (cuadros verdes) ejecuta el comando **dentro** del `.venv`, sincronizándolo antes si hace falta: no activas el entorno a mano.
+- A la derecha, el equivalente mental si vienes de pip: `pyproject.toml` ≈ `requirements.in`, `uv.lock` ≈ `requirements.txt` fijado, `.venv` ≈ el entorno donde hacías `pip install`.
+- Qué se rompe sin cada pieza: sin `uv.lock` dos máquinas pueden instalar versiones distintas; sin `.python-version` cada una puede usar otro Python; sin `.venv` no hay dónde ejecutar nada.
+
 ### 3.4 Dependencias de producción frente a dependencias de desarrollo
 
 `pytest`, `httpx2` y `ruff` están en `[dependency-groups] dev` porque la API en producción no los necesita. En la imagen Docker ([[lesson-7]]) se instalará solo el grupo de producción (`uv sync --no-dev`), con lo que la imagen pesa menos y tiene menos superficie de ataque.
@@ -553,7 +565,12 @@ Cuando algo falla en la importación, pytest dice `ERROR collecting` o `ImportEr
 - [x] `GET /health` y `tests/test_health.py` (`1 passed`)
 - [x] Corregidas las erratas de las notas (`--bare`, `uv python pin`, `from fastapi.testclient`, `tests/`)
 - [x] README: "Entorno con uv y `/health`" marcado
-- [ ] (opcional) Revisar el `.gitignore`: añadir `secrets.txt` si piensas usarlo, o borrar el archivo vacío; `requirements.txt` vacío se puede eliminar
+- [x] `.gitignore` incluye `secrets.txt` (verificado el 24 oct)
+- [ ] (opcional) Borrar los archivos vacíos de la raíz del repo: `requirements.txt` (0 bytes; el proyecto usa `pyproject.toml` y `uv.lock`) y `secrets.txt` si no lo vas a usar
+
+## Diagramas de esta lección
+
+- [Figura 1.1 · `pyproject.toml`, `uv.lock`, `.python-version` y `.venv`](diagramas/entorno-uv.svg): qué declara cada archivo, qué instala `uv sync` y dónde corre `uv run`.
 
 ---
 

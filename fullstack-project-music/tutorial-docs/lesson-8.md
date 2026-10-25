@@ -352,6 +352,20 @@ Y `.head(3).to_dict("records")` devuelve una lista de diccionarios con tipos de 
  {'genre_id': 2, 'name': 'Pop',  'song_count': 1, 'avg_duration_s': 300.0, 'playlist_count': 1}]
 ```
 
+#### Diagrama: de las filas SQL al JSON
+
+![Tubería de pandas de GET /stats/top-genres: filas del LEFT JOIN, dos ramas (canciones con drop_duplicates y groupby; playlists con nunique), merge a la izquierda, fillna, ordenación multiclave, head y to_dict](diagramas/pandas-top-genres.svg)
+
+*Figura · cómo `top_genres` convierte las filas del LEFT JOIN en la lista JSON (ejemplo mínimo con 4 géneros).*
+
+**Cómo leerlo.**
+
+- Los datos del dibujo son un **ejemplo mínimo** (Rock, Pop, Folk, Blues), **no** los del test `ROWS` de arriba; la lógica es la del código final de `top_genres`.
+- **Coral = SQL y respuesta.** Arriba, `genre_rows` hace el `LEFT JOIN` Genre → Song → PlaylistSong y `pd.read_sql` lo deja en un DataFrame `rows`. Fíjate en las dos marcas ámbar: Rock·canción 1 sale **dos veces** (una fila por playlist) y Folk/Blues salen con `NaN` (género sin canciones).
+- **Morado = operaciones de pandas.** De las **mismas** `rows` salen dos ramas independientes: **A** deduplica por `(song_id, genre_id)` y agrega canciones y duración media (`stats`); **B** cuenta playlists con `nunique` **sobre `rows`, no sobre `per_song`** (`playlists`).
+- **Las dos cajas ámbar son las trampas.** Si deduplicas solo por `song_id`, Folk y Blues (ambos `NaN`) se colapsan en una fila y Blues desaparece del ranking. Y si contaras playlists sobre `per_song`, la fila Rock·canción 1·playlist 11 ya no existiría y Rock saldría con 1 playlist en vez de 2.
+- **C** une las dos ramas con `merge(..., how="left")` (no se pierde ningún género), pasa los `NaN` a `0.0`, ordena por `playlist_count ↓`, `song_count ↓`, `name ↑` y **recién entonces** corta con `head(limit)`: con `limit=3` Folk (en gris) se queda fuera. **D** es lo que FastAPI serializa: `to_dict("records")` con tipos de Python.
+
 #### Los 9 tests de `test_stats_service.py` y qué protege cada uno
 
 El archivo trae su propio *helper* para construir DataFrames a mano:
@@ -985,6 +999,22 @@ Por qué salen esos números (con `compartidos / √(rasgos_a · rasgos_b)`):
 
 (7 funciones, 1 con 2 casos → **8 tests**.)
 
+#### Diagrama: de la matriz al JSON de canciones parecidas
+
+![Tubería de NumPy de GET /songs/{id}/similar: entradas de la base de datos, matriz multi-hot, fila objetivo, similitud coseno con np.divide, argsort estable con filtro y respuesta JSON](diagramas/numpy-similitud.svg)
+
+*Figura · recorrido completo de `GET /songs/{id}/similar` con 4 canciones (los Pasos 3 y 4 de la lección juntos).*
+
+**Cómo leerlo.**
+
+- Igual que en el diagrama de pandas, los datos son un **ejemplo mínimo** (4 canciones con ids 3, 7, 8 y 12; 2 géneros; 3 artistas), no los de los tests.
+- **Gris = datos de entrada.** El repositorio (`list_song_rows`, `list_song_artist_links`) devuelve tuplas; a `feature_matrix` solo llegan `(song_id, genre_id)` y `(song_id, artist_id)`. El título se queda en `rows` y se usará al final.
+- **Morado = NumPy.** `feature_matrix` construye `M`: una fila por canción (en el orden de `songs`) y las columnas son los géneros y luego los artistas, ambos ordenados por id. Las cabeceras `a10`, `a20`, `a30` son **ids** de artista.
+- **Ámbar = ojo.** `target = row_of[7] = 1` es el **índice de fila**, no el id de la canción. Si pasaras el id 7 como `target`, aquí NumPy fallaría con `IndexError` (solo hay 4 filas) y, con ids pequeños, compararías en silencio la canción equivocada: es el error de «el índice de fila NO es el id» de §3.2.
+- **Caja 3:** `M @ v` da todos los productos escalares de golpe y `np.divide(..., where=denom != 0)` evita el `0/0` de una canción sin rasgos. En la tabla, `score = dots / (norma · 1.7321)`; la fila 1 (la propia canción 7) da exactamente `1.0000`.
+- **Caja 4:** `argsort(-scores)` ordena de mayor a menor (sin el signo menos saldrían primero las menos parecidas) y el filtro quita la canción objetivo (si no, sería siempre la primera con 1.0) y las de score 0. Las cuatro etiquetas de la derecha muestran qué pasa con cada fila.
+- **Caja 5:** `similar_songs` traduce **fila → id real** (`rows[i][0]`) y añade el título (`rows[i][1]`); `round(score, 4)` se hace aquí, en el servicio, no en `top_similar`.
+
 #### Comprobación final de la lección
 
 ```bash
@@ -1384,12 +1414,13 @@ Cada petición hace `list_song_rows` + `list_song_artist_links` y **reconstruye 
 - [x] Suite completa: **153 passed, 1 skipped**; ruff limpio; `import app.main` correcto
 - [x] README: filas de contrato para `/stats/top-genres` y `/songs/{id}/similar`, filas de schemas y casilla marcada
 - [x] Commit con `pyproject.toml` y `uv.lock`
+- [x] Diagramas añadidos a la nota: `diagramas/pandas-top-genres.svg` y `diagramas/numpy-similitud.svg`
 
-**Observaciones sobre el código actual del repo 📝** (comprobadas al redactar; no son fallos de los tests, son pulido pendiente)
+**Observaciones sobre el código actual del repo 📝** (comprobadas al redactar y vueltas a comprobar, solo lectura, al añadir los diagramas; no son fallos de los tests, son pulido pendiente)
 
 - [ ] **`list_song_rows` no lleva `.order_by(models.Song.id)`**, y el enunciado decía que las canciones debían salir ordenadas por id porque "el orden de las filas decide el desempate". Los tests pasan porque SQLite suele devolver las filas por `rowid`, pero **sin `ORDER BY` el orden no está garantizado** (en PostgreSQL, por ejemplo, el desempate podría variar). Añadir: `select(...).order_by(models.Song.id)`.
-- [ ] **Mensaje del 404 con typo:** `f"Song {song_id} not fount"` → `not found` (el test solo comprueba que contenga `"99"`, por eso pasa).
-- [ ] **README: filas de schemas duplicadas.** `GenreStats` y `SimilarSong` aparecen dos veces (líneas 94–97). Borrar las dos repetidas.
+- [ ] **Mensaje del 404 con typo** (`routers/songs.py`, línea 46, el endpoint `/similar`; el de la línea 39 sí está bien): `f"Song {song_id} not fount"` → `not found` (el test solo comprueba que contenga `"99"`, por eso pasa).
+- [ ] **README: filas de schemas duplicadas.** `GenreStats` y `SimilarSong` aparecen dos veces (líneas 94–97; siguen así). Borrar las dos repetidas (96–97).
 - [ ] (Opcional) `top_genres`: el `astype` con `"avg_duration_s": float` es redundante, y los dos `rows`/`stats` se podrían nombrar más claro. Funciona igual.
 
 **Pendiente a futuro**
@@ -1426,3 +1457,10 @@ curl "localhost:8000/songs/2/similar?limit=3"
 curl "localhost:8000/songs/9999/similar"      # 404 con el sobre de error
 curl "localhost:8000/stats/top-genres?limit=0" # 422
 ```
+
+---
+
+## Diagramas de esta lección
+
+- [pandas-top-genres.svg](diagramas/pandas-top-genres.svg): de las filas del `LEFT JOIN` al JSON de `GET /stats/top-genres` (§2.1, antes de los 9 tests del servicio).
+- [numpy-similitud.svg](diagramas/numpy-similitud.svg): de la matriz multi-hot a las canciones parecidas de `GET /songs/{id}/similar` (§2.4, antes de la comprobación final).

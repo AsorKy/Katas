@@ -46,6 +46,21 @@ Archivos tocados (seis, más el test del contrato):
 
 Dependencias que ya estaban instaladas desde [[lesson-1]]: `pyjwt` (2.15.1 en `uv.lock`) y `pwdlib[argon2]` (pwdlib 0.3.1, que usa `argon2-cffi` 25.1.0 por debajo).
 
+**Mapa de la lección.**
+
+![Flujo de autenticación: registro, login con emisión del token y petición protegida con Bearer](diagramas/jwt-flujo.svg)
+
+*Figura · de la contraseña al token y del token al usuario.*
+
+**Cómo leerlo.**
+
+- Tres bandas, de arriba abajo y en el orden en que ocurre en la vida real: te registras una vez, haces login para recibir un token y, con ese token, llamas a los endpoints protegidos.
+- **Registro:** la contraseña nunca se guarda. `hash_password` la convierte con Argon2 (la sal va dentro del propio hash) y solo `password_hash` llega a la tabla. La respuesta es `UserOut`, sin hash. El 409 sale de la comprobación previa por correo.
+- **Login:** `verify_password` compara la clave con el hash y, si cuadra, `create_access_token` firma el JWT. El 401 lleva el mismo mensaje cuando el correo no existe y cuando la clave está mal, para no revelar qué correos están registrados (§3.7).
+- **Petición protegida:** `HTTPBearer(auto_error=False)` solo lee la cabecera. Quien lanza los tres 401 es `current_user`: sin cabecera, firma o `exp` inválidas, o un `sub` que ya no corresponde a ningún usuario. Si todo va bien, el endpoint recibe el `User` ya cargado.
+- El servidor no guarda nada del token (*stateless*, §3.4): validar es recalcular la firma. Por eso «cerrar sesión» es que el cliente tire su copia.
+- Los colores: morado es código del backend, gris es el cliente o una tabla, ámbar son errores 4xx y verde, éxitos 2xx.
+
 ---
 
 ## 2. Paso a paso
@@ -988,6 +1003,16 @@ Las contraseñas se **hashean**; nunca se guardan en claro ni «codificadas». L
 - **`algorithms=[...]` es obligatorio al decodificar** (sin él, `DecodeError`). Es una protección: evita que un atacante declare en el header otro algoritmo (por ejemplo «ninguno») para saltarse la verificación. Tú dices cuál aceptas.
 - `decode` hace tres comprobaciones a la vez: firma, `exp`, `sub` string.
 
+![Un JWT son tres partes unidas por puntos: cabecera, carga y firma](diagramas/jwt-anatomia.svg)
+
+*Figura · anatomía del `access_token` y cómo lo arma `create_access_token`.*
+
+**Cómo leerlo.**
+
+- Las tres partes se codifican en base64url y se unen con puntos. La cabecera dice qué algoritmo se usó (`HS256`) y la carga lleva los datos (`sub`, `exp`).
+- Cualquiera puede decodificar la carga sin la clave, así que no va nada sensible dentro. Lo que **no** puede hacer nadie sin `secret_key` es cambiar la carga y que la firma siga valiendo.
+- `decode_access_token` devuelve `None` en los tres casos que acaban en 401: firma mala, token caducado o `sub` que no es un número.
+
 ### 3.4 Stateless (sin estado)
 
 El servidor no guarda ningún token ni sesión: valida recalculando la firma. Consecuencias: no hay tabla de sesiones; **el logout lo hace el cliente borrando su token** (por eso `DELETE /auth/logout` no está en el contrato); el token es válido hasta que caduca (`access_token_minutes = 60`).
@@ -1174,8 +1199,15 @@ Cada caso de fallo de `current_user` (sin header / token malo / usuario fantasma
 - [x] `tests/test_auth_api.py`: 14 passed
 - [x] Aserción `/me == 501` quitada de `test_contract.py` (comentada)
 - [x] README: `[x] Autenticación`
-- [ ] (Opcional) Borrar el stub `DELETE /auth/logout` de `routers/auth.py`
-- [ ] (Opcional) Borrar las 3 líneas comentadas del `DELETE /delete` al final de `routers/users.py`
-- [ ] (Opcional) Cambiar `"Invalid user or email"` por `"Invalid or expired token"` en `current_user`
+- [x] README marcado hoy: Entorno, Contrato, Modelos, Autenticación, Canciones y artistas, Playlists y pandas/NumPy; faltan React y Dockerfile (verificado el 24 oct 2026)
+- [x] `secrets.txt` ya está en el `.gitignore` (verificado el 24 oct 2026)
+- [ ] (Opcional) Borrar el stub `DELETE /auth/logout` de `routers/auth.py` (sigue ahí: verificado el 24 oct 2026)
+- [ ] (Opcional) Borrar las 3 líneas comentadas del `DELETE /delete` al final de `routers/users.py` (siguen ahí: verificado el 24 oct 2026)
+- [ ] (Opcional) Los mensajes de los dos últimos 401 de `current_user` están cruzados (verificado el 24 oct 2026): un token inválido dice `"Invalid user or email"` y un usuario inexistente dice `"Invalid or expired token"`; basta con intercambiarlos
 - [ ] (Opcional 📝) Validar el formato del correo (`EmailStr`) y normalizarlo a minúsculas
 - [ ] Antes de producción: inyectar `SECRET_KEY` por entorno ([[lesson-7]])
+
+## Diagramas de esta lección
+
+- [Flujo de autenticación](diagramas/jwt-flujo.svg): registro, login y petición protegida, con el origen de cada 401 (sección 1).
+- [Anatomía de un JWT](diagramas/jwt-anatomia.svg): cabecera, carga y firma, y cómo las arma `create_access_token` (sección 3.3).

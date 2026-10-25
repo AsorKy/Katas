@@ -197,6 +197,21 @@ uv run pytest tests/test_models.py -q       # al final, el archivo entero: 14 pa
 
 Diagrama (📝 hecho desde el código; corresponde a la imagen pegada en las notas del usuario):
 
+![Modelo de datos: siete tablas con sus claves primarias y foráneas y las cardinalidades 1–N y N–M](diagramas/modelo-de-datos.svg)
+
+*Figura · modelo de datos del proyecto (estado actual del repo).*
+
+**Cómo leerlo.**
+
+- Cada caja es una tabla. `PK`, `FK` y `UK` marcan clave primaria, foránea y única; las líneas llevan `1` y `N`: cuántas filas hay a cada lado.
+- Azul: el catálogo (`genres`, `artists`, `songs`). Morado: lo que pertenece a un usuario (`users`, `playlists`). Gris: las dos tablas puente.
+- Un género tiene muchas canciones (`songs.genre_id`) y un usuario tiene muchas playlists (`playlists.owner_id`). Son relaciones 1–N, y la clave foránea vive siempre en el lado «N».
+- Canciones y artistas son N–M: una canción tiene varios artistas y un artista varias canciones. Por eso existe `song_artists`, con PK `(song_id, artist_id)` y el `role` como dato propio. Lo mismo ocurre entre `playlists` y `songs` con `playlist_songs`, que guarda `position` y `added_at`.
+- Sin tabla puente, el N–M no cabe en columnas: tendrías que meter listas dentro de una celda, y se pierden la unicidad del par y los `JOIN` limpios.
+- El proyecto **no usa `relationship()`**: el enlace entre tablas son solo las claves foráneas, y las consultas hacen el `JOIN` a mano ([[lesson-5]]).
+
+El mismo diagrama como código Mermaid (fuente editable; Obsidian lo dibuja):
+
 ```mermaid
 erDiagram
     users ||--o{ playlists : "owner_id"
@@ -998,6 +1013,8 @@ Y una trampa de SQLite que ya conoces: **por defecto no las aplica** (§3.11).
 
 Sin la unicidad del par se cuela el duplicado (tabla de 2 filas iguales del §2.4.4). Una tabla puente **no es una entidad**.
 
+En la figura de [[#2.4.2 Qué pide el README (la especificación)|2.4.2]] son las dos cajas grises: su PK es la pareja de claves foráneas, por eso no tienen `id` propio.
+
 ### 3.6 Restricciones (constraints) y defensa en profundidad
 
 | Restricción | Dónde | Efecto |
@@ -1189,7 +1206,12 @@ Errores del tutor en esta lección: en el primer diagnóstico agrupé los arregl
 - [x] Base real sembrada: 8 géneros · 13 artistas · 44 canciones · 58 `song_artists`
 - [x] Resumen del usuario revisado y mapa de la request dibujado
 - [ ] Bonus: escribir `titles_by_artist(rows)` (volver a anidar) — opcional
-- [ ] Borrar `song_ids` si quedara en `flatten_catalog` (ya no está en el repo actual)
+- [x] `song_ids` ya no está en `flatten_catalog` (verificado el 24 oct 2026)
 - [ ] Mejora opcional: hacer condicional `check_same_thread`/`PRAGMA` según el tipo de URL (para Postgres)
 - [ ] Mejora opcional: reforzar "como máximo un `main` por canción" con un índice único parcial
 - [x] Marcar los 3 primeros ítems del README y commit (lo hace el usuario)
+- [x] README: `Modelos, base de datos y semilla` marcado (verificado el 24 oct 2026)
+
+## Diagramas de esta lección
+
+- [Modelo de datos](diagramas/modelo-de-datos.svg): las siete tablas, sus claves y las cardinalidades (sección 2.4.2).

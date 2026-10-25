@@ -18,8 +18,8 @@ export default function Me({token}) {
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     setMe(await res.json());
                 } catch (e){
-                    if (error.name === "AbortError") return;
-                    setError(e);
+                    if (e.name === "AbortError") return;
+                    setError(e.message);
                 } 
             }
         
@@ -29,11 +29,11 @@ export default function Me({token}) {
         [token]
     );
 
-    if (error) return <p role="alert">error</p>; 
+    if (error) return <p role="alert">Error: {error}</p>; 
     if (!me) return <p>Cargando perfil...</p>;
     return (
         <p>
-            Session iniciada como <string>{me.email}</string>
+            Sesión iniciada como <strong>{me.email}</strong>
         </p>
     );
 
