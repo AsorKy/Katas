@@ -10,7 +10,7 @@ estado: en-curso
 >
 > **Caso del ejercicio:** plataforma de streaming de música. Supuestos: 1 M de usuarios activos al día, 20 reproducciones cada uno, canción de 4 min a 128 kbps, catálogo de 10 M de canciones.
 >
-> **Estado:** Ronda 0 diagnosticada (5 de 12). Falta que contestes la Ronda 1 (se plantea en el chat).
+> **Estado:** Ronda 0 (5 de 12) y Ronda 1 (3,5 de 8) diagnosticadas. Falta contestar la Ronda 1b (§9).
 
 ---
 
@@ -26,6 +26,7 @@ estado: en-curso
 2. **Diagnóstico** (§2): 5 de 12 puntos, con tres causas raíz y una corrección por pregunta.
 3. **[[design-0]]:** la ficha de siete pasos que consolida este entrenamiento y los cuatro documentos de protocolos de tu Vault.
 4. **Esta lección:** los conceptos del paso 1, con las cuentas verificadas por código, cuatro diagramas, la hoja de capacidad completa de la plataforma y preguntas de entrevista.
+5. **Ronda 1** (estimación, ocho preguntas): 3,5 de 8. Diagnóstico y soluciones en §8; una Ronda 1b con números nuevos en §9.
 
 > 📝 **Nota sobre las preguntas.** El enunciado literal de las doce preguntas de la Ronda 0 no está en mi registro de la sesión. El *tema* de cada una lo reconstruyo a partir de tus respuestas; está marcado con 📝. Si algún tema no coincide con lo que recuerdas, corrígeme y lo ajusto.
 
@@ -383,6 +384,13 @@ Es la cuenta que debes poder rehacer a mano, sin mirar. Cada fila sale de la ant
 | «Deshacer la transacción» en una subida | Se pensó en una transacción de base para algo de minutos y fuera de la base | Estados + limpieza de incompletas + reintentos idempotentes | La subida no es una transacción |
 | «Conservo solo el archivo final» | No se vio que la conversión con pérdida no se deshace | Conservar el original | El *master* es barato; perderlo, no |
 | Sin confianzas (1–5) | Se omitió la columna de calibración | Puntuar cada respuesta | Los fallos con confianza alta son los puntos ciegos |
+| «430 TB diarios» para 5.000 × 86 MB | Se perdió un factor 1000 y a un total se le puso periodo | 430.000 MB = 430 GB; un total no es «diario» | Escala de unidades (MB, GB, TB) |
+| «Factor de pico = (0,6 × 4 h) × 24 = 57,6» | Se multiplicó por las horas en lugar de dividir | (fracción ÷ horas) × 24 = 3,6, siempre entre 1 y 24 ÷ horas | Comprobación de rango (§8.4) |
+| «Ancho de banda = volumen × duración» | Se mezcló volumen con tasa | Tasa por oyente × oyentes a la vez | Tasa frente a volumen (§3.3) |
+| «40 p/s» de peticiones en vuelo | La concurrencia es un conteo, no una tasa | 40 peticiones | Qué magnitud es cada número |
+| «Comprimir lo almacenado baja el egreso» | No se separó lo que se guarda de lo que se entrega | El ahorro es solo de almacenamiento; el egreso baja con el bitrate | Guardar frente a entregar (§3.10) |
+| Resultados imposibles con confianza 5 | No se comprueba si el resultado es posible | Cruzarlo con un límite físico (§8.4) | Confianza máxima 2 si no pasa |
+| Pregunta de percentiles en blanco | El percentil se vio pero no se practicó | Ordenar y contar: p95 = valor bajo el que queda el 95 % | Percentiles y cola (§3.8) |
 
 ---
 
@@ -414,9 +422,146 @@ Es la cuenta que debes poder rehacer a mano, sin mirar. Cada fila sale de la ant
 - [x] Diagnóstico entregado: 5 de 12, tres causas raíz
 - [x] [[design-0]] creado (v1)
 - [x] Cuentas verificadas por código (§3.9, §3.10)
-- [ ] Leer [[design-0]] §1 y §2, y esta lección §3.3–§3.8
+- [x] Leer [[design-0]] §1 y §2, y esta lección §3.3–§3.8
 - [ ] Rehacer a mano la hoja de capacidad (§3.9) sin mirarla
-- [ ] Contestar la Ronda 1, con confianza (1–5) y unidades escritas en cada línea
+- [x] Ronda 1 contestada (8 preguntas) y diagnosticada: 3,5 de 8 (§8)
+- [ ] Leer §8: soluciones y comprobaciones de «¿es posible?»
+- [ ] Contestar la Ronda 1b (§9), con confianza y la comprobación usada en cada resultado
+
+---
+
+## 8. Ronda 1: diagnóstico y soluciones
+
+Misma escala que en §2.1 (✔ = 1 · ◐ = 0,5 · ✘ = 0). Los enunciados van literales para que no se pierdan, como pasó con la Ronda 0.
+
+### 8.1 Marcador
+
+| # | Tema | Veredicto | Tu confianza | Idea clave |
+| --- | --- | --- | --- | --- |
+| 1 | Descarga frente a streaming (volumen, tasa, tiempo) | ✘ | 4 · 3 · 5 | Mismo volumen, distinta tasa; tiempo = volumen ÷ tasa de la línea |
+| 2 | Podcasts: media, concurrencia, pico y Gbps | ◐ | 5 · 5 · 5 · 4 | Factor = 24 × fracción ÷ horas; a la vez × bitrate = Gbps |
+| 3 | Disponibilidad en serie y SLO | ✔ | 5 · 5 · 5 | Producto; el techo lo marcan todos los eslabones, no solo el peor |
+| 4 | Media, percentiles y cola | ✘ | sin confianza · 2 · 2 | La media esconde la cola; p95 y p99 son posiciones de la lista ordenada |
+| 5 | Peticiones en vuelo y pool | ◐ | 5 · 5 | L es un conteo; la saturación se alimenta sola |
+| 6 | Costos: lo que guardas y lo que entregas | ◐ | sin confianza | Comprimir lo almacenado no cambia el egreso |
+| 7 | Preguntas de aclaración (notificaciones push) | ✘ | sin confianza | Sin conocer el dominio, empieza por «¿qué hace?» |
+| 8 | Bits y bytes | ✔ | sin confianza | 3,2 Gbps = 0,4 GB/s |
+
+**Total: 3,5 / 8** (2 ✔, 3 ◐, 3 ✘). No es comparable con el 5 / 12 de la Ronda 0, porque las preguntas cambian; lo que se repite es el *tipo* de error.
+
+### 8.2 Las tres causas raíz
+
+1. **No compruebas si el resultado es posible.** Diste con confianza 4 o 5: 4 días para bajar un álbum, 232 GB/s por una línea de 1,25 GB/s, 612.288 reproducciones por segundo con 300.000 usuarios y 421 millones de Gbps. Cada una se descarta en diez segundos con un límite físico (§8.4).
+2. **Mezclas volumen, tasa y conteo.** «430 TB diarios» (era un total, y eran GB), «kbps/s», «40 p/s» para peticiones a la vez, volumen × duración. Es la causa 2 de la Ronda 0 (unidades) con otra cara: ahora no falla la división entre 8, falla *qué magnitud es* cada número.
+3. **Fórmulas sin su sentido.** El factor de pico es «cuántas veces la media» y no puede valer 57,6; la ventana de 4 h lo limita a 6. Y los percentiles no están practicados: la pregunta 4 quedó en blanco.
+
+**Lo sólido:** la ley de Little en número (40 y 1.600) · la serie de disponibilidad, con la idea de que el SLO no puede prometer más que el producto · bits y bytes en la pregunta 8 · 10 Gbps = 1,25 GB/s (dudabas justo de lo correcto) · los costos con unidades · cuatro «no sé» honestos.
+
+**Calibración.**
+
+| Respuesta | Confianza | Resultado |
+| --- | --- | --- |
+| 1a (tiempo de descarga) | 4 | ◐ método bien, ×1000 de más |
+| 1c (por qué no coinciden) | 5 | ✘ punto ciego |
+| 2c (factor y tasa de pico) | 5 | ✘ punto ciego |
+| 2d (Gbps al pico) | 4 | ✘ |
+| 3 (serie y SLO) | 5 | ✔ ✔ ◐ |
+| 4c y 4d | 2 | ✘ ✘ (bien calibrado) |
+| 5a y 5b | 5 | ✔ ✔ |
+
+Los dos puntos ciegos (1c y 2c) habrían saltado con la comprobación de §8.4. Y la duda que expresaste en 1a era sobre la conversión 10 Gbps a 1,25 GB/s, que estaba bien; no dudaste del volumen, que estaba mal. **Regla:** si el resultado no pasa las comprobaciones, la confianza máxima es 2, aunque «la cuenta salga».
+
+### 8.3 Soluciones resueltas
+
+**Pregunta 1.** *Un álbum de 45 min a 256 kbps pesa ≈ 86 MB. (a) 5.000 usuarios lo descargan a la vez desde una línea de 10 Gbps: ¿cuánto tardan, si la línea es el único límite? (b) ¿Qué ancho de banda ocupan 5.000 oyentes en streaming, en Mbps y en MB/s? (c) ¿Por qué no coinciden?*
+
+- **(a)** Volumen = 5.000 × 86 MB = 430.000 MB = **430 GB**. Línea = 10 Gbps ÷ 8 = **1,25 GB/s**. Tiempo = volumen ÷ tasa = 430 GB ÷ 1,25 GB/s = **344 s ≈ 5,7 min**. Tu división estaba bien; el error fue escribir 430 TB (1000 veces más) y llamarlo «diario». Un álbum que tarda 4 días en bajar debía hacerte dudar.
+- **(b)** Cada oyente consume 256 kbps, que ya es una tasa. 5.000 × 256 kbps = 1.280.000 kbps = **1.280 Mbps = 1,28 Gbps**; ÷ 8 = **160 MB/s**. No se multiplica por la duración: eso daría un volumen (160 MB/s × 2.700 s = 432 GB, el mismo de (a)), no un ancho de banda.
+- **(c)** Los dos mueven los mismos 430 GB; cambia el tiempo. La descarga va tan rápido como la línea (10 Gbps, 344 s). El streaming va al ritmo de reproducción (1,28 Gbps, 2.700 s). 10 ÷ 1,28 = 2.700 ÷ 344 ≈ **7,8**. Tu 232 GB/s era unas 186 veces la capacidad de la línea (1,25 GB/s).
+- **Lección:** el streaming reparte el mismo volumen en el tiempo de reproducción. Por eso el CDN se dimensiona por **oyentes simultáneos × bitrate**, no por catálogo × usuarios.
+
+**Pregunta 2.** *Podcasts: 300.000 usuarios activos al día, 3 episodios cada uno, 30 min a 64 kbps. (a) Reproducciones por segundo medias. (b) Reproducciones a la vez medias. (c) Si el 60 % de las reproducciones ocurre en 4 h: factor de pico y tasa de pico. (d) Ancho de banda al pico, en Gbps.*
+
+- **(a)** 300.000 × 3 = 900.000 reproducciones al día ÷ 86.400 s = **10,4 por s**. (Escribiste 84.600; recuerda 86.400 = 24 × 3.600.)
+- **(b)** L = λ × W = 10,4 por s × 1.800 s = **18.750 reproducciones a la vez**. La unidad es un conteo («reproducciones»), no «r/s».
+- **(c)** Factor = 24 × 0,6 ÷ 4 = **3,6**; pico = 10,4 × 3,6 = **37,5 por s**. Directo: 0,6 × 900.000 ÷ (4 × 3.600 s) = 37,5. Tu 57,6 salió de multiplicar por las 4 horas en lugar de dividir. Chequeo: con una ventana de 4 h el factor está entre 1 y 24 ÷ 4 = 6.
+- **(d)** A la vez en el pico: 37,5 por s × 1.800 s = **67.500**. × 64 kbps = 4.320.000 kbps = **4,32 Gbps** (540 MB/s). Usaste los 86 MB del álbum de la pregunta 1 y una tasa de reproducciones: ni el objeto ni el método eran los del streaming.
+
+**Pregunta 3.** *Tres componentes en serie que no degradan: gateway 99,95 %, API 99,9 %, base 99,95 %. (a) Disponibilidad de la cadena. (b) Minutos de caída al mes. (c) ¿Cumple un SLO de 99,9 %? ¿Qué cambiarías?*
+
+- **(a)** 0,9995 × 0,999 × 0,9995 = 0,99800 = **99,80 %**. ✔
+- **(b)** 43.200 min × (1 − 0,998) = **86,4 min**. ✔
+- **(c)** No cumple (99,9 % permite 43,2 min). Dos caminos. *Relajar el SLO* es una decisión de negocio; no se hace para que cuadre el diseño. *Cambiar el diseño*: la API es el eslabón más débil, pero duplicarla (dos réplicas independientes: 1 − 0,001² = 99,9999 %) deja la cadena en 99,8999 %, **43,2 min: sin margen**, porque gateway y base solos ya dan 0,9995 × 0,9995 = 99,90025 %. Hace falta redundancia también en gateway y base (con las tres duplicadas: 99,99985 %, unos 4 s al mes) o más nueves en cada pieza. «Independientes» es un supuesto: dos réplicas en el mismo servidor no lo son.
+- **Lo que ya tenías bien:** el SLO no puede prometer más que la serie. Además, 99,5 % es holgado para un diseño que da 99,8 %.
+
+**Pregunta 4.** *El 98 % de las peticiones responde en 80 ms y el 2 % tarda 4 s. (a) Media. (b) p95 y p99. (c) Una pantalla lanza 20 llamadas en paralelo y espera a la última: ¿qué porcentaje de pantallas ve al menos una lenta? (d) ¿Qué métrica pondrías en el SLO?*
+
+- **(a)** Media ponderada: 0,98 × 80 ms + 0,02 × 4.000 ms = 78,4 + 80 = **158,4 ms**. Parece sana y esconde que una de cada 50 espera 4 s.
+- **(b)** Ordena las peticiones de la más rápida a la más lenta. El **p-ésimo percentil** es el valor bajo el cual queda el p % de ellas. El 98 % más rápido llega hasta 80 ms, así que el p95 cae dentro de ese grupo: **80 ms**. El p99 cae en el 2 % lento: **4 s**.
+- **(c)** P(ninguna lenta) = 0,98 elevado a 20 = 0,668. Al menos una = 1 − 0,668 = **33 %**. No es 20 × 2 % = 40 %: sumar probabilidades que se solapan sobrestima.
+- **(d)** Un SLI con **umbral** y un porcentaje de peticiones buenas, más una ventana: **«el 99 % de las peticiones responde en menos de 300 ms, en 30 días»**. Un «99 %» suelto no es un SLI: falta decir qué cuenta como bueno. Con p95 el SLO no vería la cola (aquí p95 = 80 ms parece perfecto); el p99 sí.
+
+**Pregunta 5.** *Una API recibe 800 peticiones por s y cada una tarda 50 ms. (a) ¿Cuántas hay en vuelo? (b) Una dependencia sube el tiempo a 2 s: ¿cuántas hay ahora? (c) Con un pool de 300 conexiones, ¿qué pasa y qué dos mecanismos lo evitan?*
+
+- **(a)** 800 por s × 0,05 s = **40 peticiones** a la vez. **(b)** 800 por s × 2 s = **1.600 peticiones**. ✔ La unidad es un conteo: «40 peticiones», no «40 p/s».
+- **(c)** Hay 1.600 en vuelo y solo 300 conexiones: **1.300 esperan**. La espera suma tiempo, el tiempo sube, entran más peticiones en vuelo y la cola crece: un círculo vicioso (diagrama). Acaba en timeouts del cliente, reintentos que añaden carga y una API que deja de responder incluso lo que no usa la dependencia lenta.
+- **Los mecanismos** (basta con dos): **timeout corto** (libera la conexión y corta la espera), **rechazo temprano** (503 con cola acotada: un error rápido es mejor que uno lento) y **circuit breaker** (deja de llamar a la dependencia mientras está mala, y degrada).
+
+![Círculo vicioso de la saturación: dependencia lenta, más peticiones en vuelo, pool lleno, espera que suma latencia; y tres piezas que lo cortan](diagramas/diseno-pool-saturado.svg)
+
+**Pregunta 6.** *Con egreso a 0,03 USD por GB y almacenamiento a 0,023 USD por GB-mes, para 2.304 TB de egreso al mes y 434 TB almacenados: (a) ¿cuánto ahorra al mes comprimir el catálogo almacenado a la mitad? (b) ¿Y bajar el bitrate de 128 a 96 kbps? (c) ¿Cuál priorizas y por qué?*
+
+- **Base (tus cifras eran correctas):** egreso = 2.304 TB × 1.000 GB/TB × 0,03 USD/GB = **69.120 USD/mes**; almacenamiento = 434 × 1.000 × 0,023 = **9.982 USD/mes**; total 79.102. El egreso es el **87 %**.
+- **(a)** Comprimir lo *almacenado* reduce solo el almacenamiento: 9.982 ÷ 2 = **4.991 USD/mes**. El egreso es lo que sale hacia los oyentes, y no cambia porque guardes más apretado. Tu 39.551 sumaba 34.560 de egreso que no se ahorra.
+- **(b)** 128 a 96 kbps son 25 % menos de bytes entregados: 69.120 × 0,25 = **17.280 USD/mes** de egreso (y algo de almacenamiento si dejas de guardar la versión de 128 kbps).
+- **(c)** Prioriza (b): 17.280 frente a 4.991, unas **3,5 veces más**, porque el egreso domina. Pero cuesta calidad percibida, y eso se decide con el negocio.
+- **Aviso:** mi enunciado de (a) admitía otra lectura. Si «comprimir el catálogo» es reducir lo que se sirve, es la palanca (b). Lo que mide la pregunta es si separas **lo que guardas** de **lo que entregas**.
+
+**Pregunta 7.** *Te piden «un sistema de notificaciones push para 10 M de usuarios». Escribe 5 preguntas de aclaración y, para cada una, qué decisión cambia.*
+
+- **Qué es.** Una notificación push es un mensaje que el servidor envía al móvil sin que la app lo pida. No lo entrega tu servidor directamente: lo cursa un proveedor del sistema operativo (APNs en Apple, FCM en Google; en la web, Web Push). Cada instalación de la app registra un *token de dispositivo*, y tu backend guarda ese token para poder enviarle mensajes.
+- **Qué hacer sin conocer el dominio.** No saberlo no te bloquea, si dices en voz alta: «No he trabajado con push; ¿qué hace exactamente?» (pregunta 2 de [[design-0]] §3). Y sigues con las diez preguntas, que no dependen del dominio.
+- **Cinco preguntas de ejemplo:**
+
+| Pregunta | Qué decisión cambia |
+| --- | --- |
+| ¿Qué las dispara: eventos de un usuario (1 a 1) o campañas a millones? | Cola por evento frente a difusión masiva por lotes (fan-out) |
+| ¿En cuánto tiempo deben llegar a los 10 M, y la individual? | El caudal: 10 M en 10 min = 16.667 por s, y los límites del proveedor fijan cuántos workers |
+| ¿Qué pasa si llega tarde, dos veces o nunca? | Garantía de entrega: al menos una vez con idempotencia, TTL del mensaje y reintentos |
+| ¿Se segmenta o personaliza (idioma, hora local, preferencias)? | Calcular la audiencia antes o por usuario; dónde se guardan las preferencias |
+| ¿Qué plataformas hay y qué consentimiento, baja y límite de frecuencia exige la ley? | Proveedores (APNs, FCM, Web Push), caducidad de tokens, opt-out y límites por usuario |
+
+**Pregunta 8.** *Un colega calcula 10.000 oyentes × 320 kbps = 3.200.000, «así que necesitamos 3,2 GB/s». ¿Qué está mal? Corrígelo con unidades.*
+
+- 10.000 × 320 kbps = 3.200.000 **kbps** = 3.200 Mbps = **3,2 Gbps**; ÷ 8 = **400 MB/s = 0,4 GB/s**. El colega dejó el resultado sin unidad (era kbps), lo leyó como GB/s y no dividió entre 8. Tu corrección ✔.
+
+### 8.4 Comprobaciones de «¿es posible?»
+
+Antes de escribir un número, cruza el resultado con un límite que ya sabes. Cada fila de la tabla habría descartado una respuesta de esta ronda.
+
+| Si te sale… | Compáralo con… | Lo que habría saltado |
+| --- | --- | --- |
+| Una tasa de datos | La línea: 1 Gbps = 125 MB/s; 10 Gbps = 1,25 GB/s | 232 GB/s por una línea de 1,25 GB/s |
+| Eventos por segundo o gente a la vez | El número de usuarios activos | 612.288 reproducciones por segundo con 300.000 usuarios |
+| Un factor de pico | Entre 1 y 24 ÷ horas de la ventana | 57,6 con una ventana de 4 h (máximo 6) |
+| Un tiempo de espera o de descarga | Si un usuario lo viviría | Cuatro días para bajar un álbum |
+| Un volumen | Tasa × tiempo por otro camino | 160 MB/s × 2.700 s = 432 GB, no 232 GB/s |
+| Una disponibilidad en serie | No puede superar al eslabón más débil | 99,8 % es menor que 99,9 % |
+| La unidad final | La que pide la pregunta: Gbps es tasa, «a la vez» es un conteo, GB es volumen | «40 p/s» en vez de 40 peticiones |
+
+---
+
+## 9. Ronda 1b: los mismos fallos con números nuevos
+
+Antes de pasar a datos y API repetimos lo que falló, porque el paso 2 usa estas mismas cuentas. Reglas: lee §8 primero · unidades en cada línea · pasa cada resultado por §8.4 y escribe qué comprobación usaste · confianza 1 a 5 en cada respuesta · calculadora sí, buscar no.
+
+1. **Streaming frente a descarga.** Un servicio de podcasts tiene 30.000 oyentes a la vez, cada uno a 96 kbps. (a) Ancho de banda en Gbps y en MB/s. (b) ¿Cabe en una línea de 1 Gbps? (c) Si en vez de streaming cada uno descargara un episodio de 30 MB por esa línea de 1 Gbps, y la línea es el único límite, ¿cuánto tarda la última descarga?
+2. **Pico.** Una app registra 2 M de eventos al día y el 40 % ocurre en 5 horas. (a) Tasa media. (b) Factor de pico. (c) Tasa de pico. (d) ¿Entre qué dos valores tiene que estar el factor para una ventana de 5 h?
+3. **En vuelo y saturación.** Un endpoint recibe 1.200 peticiones por s y cada una tarda 40 ms. (a) ¿Cuántas hay en vuelo? (b) Una dependencia sube el tiempo a 1,5 s y el pool es de 200 conexiones: ¿cuántas hay en vuelo y cuántas esperan? (c) Explica en tres frases por qué empeora solo y nombra dos mecanismos que lo cortan.
+4. **Percentiles.** El 90 % de las peticiones responde en 50 ms, el 8 % en 300 ms y el 2 % en 5 s. (a) Media. (b) p95 y p99. (c) Una pantalla lanza 30 llamadas en paralelo: ¿qué porcentaje ve al menos una de 5 s? (d) Escribe un SLO de latencia completo (SLI con umbral, porcentaje y ventana).
+5. **Serie y redundancia.** Balanceador 99,99 %, app 99,9 %, base 99,9 %, en serie. (a) Disponibilidad de la cadena y minutos de caída al mes. (b) Duplicas la app (dos réplicas independientes): ¿qué disponibilidad y cuántos minutos al mes? (c) ¿Cumple 99,9 %? ¿Qué componente es ahora el techo y qué harías?
+6. **Lo que guardas y lo que entregas.** Un servicio entrega 1.000 TB al mes a 0,05 USD por GB y guarda 200 TB a 0,023 USD por GB-mes. (a) Costo mensual de cada uno y qué porcentaje del total es el egreso. (b) Bajar el bitrate un 20 %: ahorro mensual. (c) Mover la mitad de lo almacenado a un nivel frío de 0,004 USD por GB-mes: ahorro mensual. (d) ¿Cuál priorizas y por qué?
+7. **Aclaración.** Te piden «un sistema de recomendación de playlists para 1 M de usuarios». Escribe 5 preguntas de aclaración y, para cada una, qué decisión cambia.
 
 ---
 
@@ -434,3 +579,4 @@ Las cifras de precios son de lista y órdenes de magnitud; las fuentes son secun
 - [Cadena de estimación de tráfico](diagramas/diseno-cadena-estimacion.svg)
 - [Pico frente a media](diagramas/diseno-pico-vs-media.svg)
 - [Nueves de disponibilidad y SLO](diagramas/diseno-slo-nueves.svg)
+- [Círculo vicioso de la saturación](diagramas/diseno-pool-saturado.svg)

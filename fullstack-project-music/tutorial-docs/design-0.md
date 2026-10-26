@@ -1,14 +1,14 @@
 ---
 tags: [fullstack-project-music, diseno, protocolo, entrevista]
 diseno: 0
-estado: v1.1
+estado: v2
 ---
 
 # Design 0 · Preflight de diseño (la memoficha)
 
 > **Objetivo:** un protocolo de una página que aplicas ante cualquier «diséñame X»: siete pasos en orden fijo, cada uno con una pregunta y una salida concreta. Memorizas la ficha (§1); el resto (§2–§8) son las tablas de apoyo y §10 es el mapa que las une.
 >
-> **Versión v1.1, tras la Ronda 0 y el mapa de decisiones (§10).** Crece con cada lección del bloque de diseño ([[design-1]] añade los números; las siguientes, datos y API, piezas y flujos, profundizar, fallos y costo). Está construida con los cuatro documentos de tu Vault (`01` protocolo del backend corporativo, `02` los 15 factores, `04` protocolos de diseño, `05` resiliencia, seguridad y capacidad) y con lo que acertaste y fallaste en la Ronda 0. No necesitas abrirlos para usarla.
+> **Versión v2, tras la Ronda 0, el mapa de decisiones (§10) y la Ronda 1.** Crece con cada lección del bloque de diseño ([[design-1]] añade los números; las siguientes, datos y API, piezas y flujos, profundizar, fallos y costo). Está construida con los cuatro documentos de tu Vault (`01` protocolo del backend corporativo, `02` los 15 factores, `04` protocolos de diseño, `05` resiliencia, seguridad y capacidad) y con lo que acertaste y fallaste en la Ronda 0. No necesitas abrirlos para usarla.
 
 ---
 
@@ -59,22 +59,25 @@ estado: v1.1
 | --- | --- | --- |
 | Bits a bytes | ÷ 8 (kbps ÷ 8 = KB/s) | 128 kbps = 16 KB/s |
 | Tasa media | eventos por día ÷ 86.400 | 20 M ÷ 86.400 = **231 por s** |
-| Factor de pico | (fracción del tráfico ÷ horas de la ventana) × 24 | (0,5 ÷ 4) × 24 = **3** |
+| Factor de pico | (fracción del tráfico ÷ horas de la ventana) × 24; siempre entre 1 y 24 ÷ horas | (0,5 ÷ 4) × 24 = **3** (máximo 6) |
 | Tasa de pico | media × factor | 231 × 3 = **694 por s** |
-| Concurrencia (ley de Little) | L = λ × W | 694 × 240 s = **166.667** a la vez |
+| Concurrencia (ley de Little) | L = λ × W (un conteo, no «por s») | 694 × 240 s = **166.667** a la vez |
 | Ancho de banda | L × tasa por oyente | 166.667 × 128 kbps = **21,3 Gbps** |
 | Volumen que sale por día | eventos × MB por evento | 20 M × 3,84 MB = **76,8 TB** |
 | Almacenamiento | ítems × tamaño de todas sus versiones | 10 M × 43 MB = **434 TB** |
+| Tiempo de descarga | volumen ÷ tasa de la línea | 5.000 × 86 MB = 430 GB ÷ 1,25 GB/s = **344 s** |
+| Percentil p | el valor bajo el que queda el p % de las peticiones | 98 % en 80 ms y 2 % en 4 s: p95 = 80 ms, p99 = **4 s** |
 | Caída permitida al mes | 43.200 min × (1 − SLO) | 99,9 % → **43,2 min** · 99,99 % → **4,32 min** |
 | Disponibilidad en serie | producto de las disponibilidades | 99,9 % × 99,9 % = 99,8 % → 86 min |
-| Peticiones en vuelo | λ × W | 500 por s × 0,12 s = 60 (si W sube a 3 s: 1.500) |
+| Peticiones en vuelo | λ × W (un conteo, no «por s») | 500 por s × 0,12 s = **60** peticiones (si W sube a 3 s: 1.500) |
 | Costo del egreso | TB × 1.000 × precio por GB | 2.304 TB al mes: decenas de miles de USD (ver [[design-1]]) |
 
-**Tres chequeos de 10 segundos antes de dar un número:**
+**Cuatro chequeos de 10 segundos antes de dar un número:**
 
 1. **Escribe las unidades en cada línea.** Si no se cancelan, la cuenta está mal (kbps no son KB/s; un total no es una tasa).
 2. **¿Te piden una tasa (por segundo) o un volumen (total)?** Volumen ÷ tiempo = tasa; tasa × tiempo = volumen.
 3. **Compáralo con una referencia que sepas:** 1 día ≈ 10⁵ s (86.400) · 1 mes ≈ 2,6 M de s · 1 Gbps = 125 MB/s · 1 TB por día ≈ 93 Mbps sostenidos.
+4. **¿Es posible?** Cruza el resultado con un límite que ya sabes: la línea (1 Gbps = 125 MB/s), el número de usuarios, y que un factor de pico esté entre 1 y 24 ÷ horas de la ventana. Si no pasa, tu confianza máxima es 2, aunque la cuenta «salga» ([[design-1]] §8.4).
 
 Y el recordatorio de latencia: se habla de **percentiles** (p95, p99), no de la media; la media esconde la cola.
 
@@ -166,7 +169,7 @@ Regla: **no cites un servicio que no sepas justificar con una fila de números o
 
 ---
 
-## 8. Antipatrones (los de la Ronda 0 y los del Vault)
+## 8. Antipatrones (los de las Rondas 0 y 1 y los del Vault)
 
 | Antipatrón | Patrón |
 | --- | --- |
@@ -181,6 +184,8 @@ Regla: **no cites un servicio que no sepas justificar con una fila de números o
 | «Microservicios porque es mid+» | Monolito modular y una razón escrita por cada servicio |
 | «Alta disponibilidad» sin decir qué ve el usuario | Tabla de fallos con la columna «qué ve el usuario» |
 | «Lo añadimos cuando haga falta» | «Lo añadimos cuando [métrica] pase de [umbral]» |
+| Dar un resultado sin comprobar si es posible | Cruzarlo con un límite físico y bajar la confianza si no pasa |
+| Tratar lo que guardo y lo que entrego como una sola cifra | Almacenamiento por lo guardado; egreso por lo entregado (bitrate) |
 
 ---
 
@@ -190,7 +195,7 @@ Regla: **no cites un servicio que no sepas justificar con una fila de números o
 | --- | --- |
 | **v1** (Ronda 0) | Los siete pasos, los números de bolsillo, las diez preguntas, los disparadores, la tabla de fallos, el mapa de la nube y los antipatrones |
 | **v1.1** (mapa de decisiones) | §10: tres escaleras de preguntas (números, datos y bytes, fallos y seguridad) y la cadena de eslabones, con la relación entre las diez preguntas de §3 y los mapas |
-| **v2** ([[design-1]]) | Se completan los números con los errores reales de la Ronda 0 (unidades, pico, SLO, percentiles) |
+| **v2** (Ronda 1, [[design-1]] §8) | Cuarto chequeo «¿es posible?», rango del factor de pico, fórmulas de tiempo de descarga y percentil, y la magnitud de cada fórmula (conteo, tasa o volumen) |
 | **siguientes** | Datos y API · piezas y flujos (planos de control y de datos) · profundizar · fallos y costo, cada una afinando su paso |
 
 **Cuándo se revisa la nube:** en el paso 3, al mapear piezas a servicios (§6), y en el paso 5, al calcular el costo dominante. No antes: el servicio se elige cuando ya sabes qué problema resuelve.
