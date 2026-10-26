@@ -499,7 +499,7 @@ Un `#` solo es comentario si es lo primero de la línea. Al final de un `COPY` o
 
 ## 5. Cómo se relaciona con el ritme
 
-**Con el README.** Cuatro cambios pendientes en tu `README.md`:
+**Con el README.** Cuatro cambios en el `README.md` del miniproyecto (**hechos**), más una sección «Con Docker» en «Cómo correr», la estructura actualizada y la tabla de rutas reparada (una línea en blanco partía las dos últimas filas):
 
 - Línea 11: quitar `Compose` de "Fuera (por ahora)".
 - Línea 19: "un solo Dockerfile al final" → "dos Dockerfile y Compose al final".
@@ -540,12 +540,13 @@ Un `#` solo es comentario si es lo primero de la línea. Al final de un `COPY` o
 - [x] `backend/.dockerignore` y `frontend/.dockerignore`
 - [x] `compose.yaml` y `SECRET_KEY` en `.env`
 - [x] `docker compose up --build` sin errores
-- [ ] `scripts/smoke.sh` creado y `./scripts/smoke.sh` termina en `TODO OK`
+- [x] `scripts/smoke.sh` creado (ejecutable, idéntico al validado)
+- [ ] `./scripts/smoke.sh` termina en `TODO OK` (no deja rastro en el repo: confírmalo)
 - [ ] Login en `http://localhost:5173` funciona
 - [ ] Los datos sobreviven a `docker compose down` / `up`
-- [ ] README actualizado (sección 5) y casillas marcadas
-- [ ] Renombrar `dockerfile` → `Dockerfile` si el repo lo guarda en minúsculas (`git mv`)
-- [ ] Commit con Dockerfiles, `.dockerignore`, `compose.yaml` y `scripts/smoke.sh`
+- [x] README actualizado (sección 5) y casillas marcadas
+- [x] Renombrar `dockerfile` → `Dockerfile` (el repo ya lo versiona con mayúscula)
+- [x] Commit con Dockerfiles, `.dockerignore`, `compose.yaml` y `scripts/smoke.sh` (`95715cb`)
 
 ## Diagramas de esta lección
 

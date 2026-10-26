@@ -8,7 +8,7 @@ Proyecto de práctica para entrenar la codificación a mano: **contrato primero*
 **Dentro:** registro y login, canciones con uno o varios artistas, listado con filtros, playlists,
 canciones en las que participa un artista y en cuántas playlists aparece.
 
-**Fuera (por ahora):** subida de audio real, Redis, Alembic, Compose, pagos.
+**Fuera (por ahora):** subida de audio real, Redis, Alembic, pagos.
 
 "Cargar una canción" significa registrar su **metadato** (título, duración, género, artistas).
 Subir el archivo de audio queda como extra, detrás de un adaptador `Storage`.
@@ -16,7 +16,7 @@ Subir el archivo de audio queda como extra, detrás de un adaptador `Storage`.
 ## Stack
 
 Python 3.12 · FastAPI · Pydantic v2 · SQLAlchemy 2 (síncrono) · SQLite · JWT (PyJWT) ·
-hash de contraseñas con Argon2 (pwdlib) · pytest · uv · React (Vite) · un solo Dockerfile al final.
+hash de contraseñas con Argon2 (pwdlib) · pytest · uv · React (Vite) · Docker (un Dockerfile por servicio) y Docker Compose.
 
 La URL de la base sale de la variable `DATABASE_URL`, así que pasar a Postgres es cambiar una línea.
 
@@ -65,7 +65,6 @@ Los parámetros de ruta se llaman `{artist_id}`, `{song_id}` y `{playlist_id}`.
 | `POST /playlists/{playlist_id}/songs` | sí, dueño | `PlaylistAddSong` | 201 `PlaylistDetail` | 401, 404, 409 ya está |
 | `DELETE /playlists/{playlist_id}/songs/{song_id}` | sí, dueño | — | 204 | 401, 404 |
 | `GET /health` | no | — | 200 `{"status": "ok"}` | — |
-
 | `GET /stats/top-genres` | no | `limit` (1–50, por defecto 5) | 200 `list[GenreStats]` | 422 |
 | `GET /songs/{song_id}/similar` | no | `limit` (1–50, por defecto 5) | 200 `list[SimilarSong]` | 404, 422 |
 
@@ -112,11 +111,33 @@ Notas sobre los schemas:
 
 ## Cómo correr
 
+### Con Docker (recomendado)
+
+Desde la raíz del proyecto:
+
+```bash
+echo "SECRET_KEY=$(openssl rand -hex 32)" >> .env    # una sola vez
+docker compose up --build
+```
+
+- API y contrato en `http://localhost:8000/docs`.
+- Interfaz en `http://localhost:5173`. El puerto importa: el backend solo acepta CORS desde ese origen.
+- Con la app levantada, `./scripts/smoke.sh` recorre el flujo completo con `curl` y termina en `TODO OK`.
+- `docker compose down` conserva la base (volumen `backend-db`); `docker compose down -v` la borra.
+
+### Sin Docker
+
 ```bash
 cd backend
 uv sync
 uv run uvicorn app.main:app --reload     # http://localhost:8000/docs
 uv run pytest -q
+```
+
+```bash
+cd frontend
+npm install
+npm run dev                              # http://localhost:5173
 ```
 
 ## Estructura
@@ -127,7 +148,13 @@ fullstack-project-music/
     app/        main.py · schemas.py · routers/ · services/ · repositories/
     tests/
     data/       base SQLite y semilla
+    Dockerfile
   frontend/
+    src/        App · SongList · LoginForm · Me
+    Dockerfile  construcción con Node y servidor nginx
+  scripts/      smoke.sh (flujo completo con curl)
+  tutorial-docs/  notas de clase y diagramas
+  compose.yaml  API, frontend y volumen para SQLite
 ```
 
 ## Orden de construcción
@@ -140,9 +167,9 @@ fullstack-project-music/
 - [x] Playlists
 - [x] pandas: `/stats/top-genres` · NumPy: `/songs/{id}/similar`
 - [x] React: `SongList`, `LoginForm`
-- [ ] Dockerfile
+- [x] Docker: Dockerfile del backend, Dockerfile del frontend (multietapa con nginx) y `compose.yaml`
 
 ## Criterio de "hecho"
 
-Los tests pasan, `/docs` muestra el contrato, un script con `curl` recorre el flujo completo
-(registro, login, crear canción, crear playlist, añadir canción) y `docker run` levanta la API.
+Los tests pasan, `/docs` muestra el contrato, un script con `curl` (`scripts/smoke.sh`) recorre el flujo completo
+(registro, login, crear canción, crear playlist, añadir canción) y `docker compose up` levanta la API y el frontend.
