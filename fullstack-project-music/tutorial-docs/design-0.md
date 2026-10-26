@@ -1,14 +1,14 @@
 ---
 tags: [fullstack-project-music, diseno, protocolo, entrevista]
 diseno: 0
-estado: v1
+estado: v1.1
 ---
 
 # Design 0 · Preflight de diseño (la memoficha)
 
-> **Objetivo:** un protocolo de una página que aplicas ante cualquier «diséñame X»: siete pasos en orden fijo, cada uno con una pregunta y una salida concreta. Memorizas la ficha (§1); el resto (§2–§8) son las tablas de apoyo.
+> **Objetivo:** un protocolo de una página que aplicas ante cualquier «diséñame X»: siete pasos en orden fijo, cada uno con una pregunta y una salida concreta. Memorizas la ficha (§1); el resto (§2–§8) son las tablas de apoyo y §10 es el mapa que las une.
 >
-> **Versión v1, tras la Ronda 0.** Crece con cada lección del bloque de diseño ([[design-1]] añade los números; las siguientes, datos y API, piezas y flujos, profundizar, fallos y costo). Está construida con los cuatro documentos de tu Vault (`01` protocolo del backend corporativo, `02` los 15 factores, `04` protocolos de diseño, `05` resiliencia, seguridad y capacidad) y con lo que acertaste y fallaste en la Ronda 0. No necesitas abrirlos para usarla.
+> **Versión v1.1, tras la Ronda 0 y el mapa de decisiones (§10).** Crece con cada lección del bloque de diseño ([[design-1]] añade los números; las siguientes, datos y API, piezas y flujos, profundizar, fallos y costo). Está construida con los cuatro documentos de tu Vault (`01` protocolo del backend corporativo, `02` los 15 factores, `04` protocolos de diseño, `05` resiliencia, seguridad y capacidad) y con lo que acertaste y fallaste en la Ronda 0. No necesitas abrirlos para usarla.
 
 ---
 
@@ -19,6 +19,7 @@ estado: v1
 - **Ante un sistema que ya existe (diagnóstico):** recorres los mismos pasos mirando qué falta. ¿Hay números? ¿Cada dato tiene dueño? ¿Los bytes pasan por donde no deben? ¿Qué ve el usuario cuando algo cae?
 - **Para formular un brief propio:** los pasos 0 y 1 son el documento de encuadre; 2–4 la propuesta; 5–6 el riesgo y la decisión.
 - **Cada pieza responde a un problema.** Si no puedes nombrar el problema (una fila de requisitos o de flujos), no pones la pieza.
+- **Cuando no sepas qué pieza toca:** recorre las escaleras de §10; cada pregunta de sí o no te lleva a la pieza o te dice que no la pongas.
 
 **Frases ancla** (te dan tiempo y muestran método):
 
@@ -188,10 +189,75 @@ Regla: **no cites un servicio que no sepas justificar con una fila de números o
 | Versión | Qué añadió |
 | --- | --- |
 | **v1** (Ronda 0) | Los siete pasos, los números de bolsillo, las diez preguntas, los disparadores, la tabla de fallos, el mapa de la nube y los antipatrones |
+| **v1.1** (mapa de decisiones) | §10: tres escaleras de preguntas (números, datos y bytes, fallos y seguridad) y la cadena de eslabones, con la relación entre las diez preguntas de §3 y los mapas |
 | **v2** ([[design-1]]) | Se completan los números con los errores reales de la Ronda 0 (unidades, pico, SLO, percentiles) |
 | **siguientes** | Datos y API · piezas y flujos (planos de control y de datos) · profundizar · fallos y costo, cada una afinando su paso |
 
 **Cuándo se revisa la nube:** en el paso 3, al mapear piezas a servicios (§6), y en el paso 5, al calcular el costo dominante. No antes: el servicio se elige cuando ya sabes qué problema resuelve.
+
+---
+
+## 10. Mapa de decisiones: de la pregunta a la pieza
+
+Las diez preguntas de §3 y los disparadores de §4 son lo mismo visto desde dos lados: la pregunta te hace descubrir el problema y el disparador te da la pieza. Aquí van unidos en cuatro mapas. Los tres primeros son **escaleras**: preguntas de sí o no, de arriba abajo. Cada «sí» marca una pieza y **siempre se sigue bajando** (un «sí» no corta la escalera: puedes marcar varias). El cuarto es la **cadena**: por qué las piezas aparecen en ese orden.
+
+### Cómo recorrerlo
+
+1. **Mapa 1, los números**, siempre primero. Sus respuestas salen del paso 1 y deciden cuánto pesa todo lo demás: un pico de 21,3 Gbps (el de la plataforma de ejemplo, [[design-1]] §3.6) hace obligatorias la CDN y la URL firmada.
+2. **Mapa 2, datos, bytes y trabajo**, al diseñar datos, piezas y flujos (pasos 2 y 3).
+3. **Mapa 3, fallos, abuso y confianza**, al revisar fallos y costo (paso 5). Si hay varios clientes, el tenant ya lo decides con los datos, en el paso 2.
+4. **Apunta cada «sí»** con el problema que lo justificó (en la tabla de §5 o junto a la pieza). Si no puedes decir el problema, no era un «sí».
+5. **Al final de cada escalera, lo que no marcaste no lo pongas.** Es el antipatrón de §8 al revés: una pieza sin problema es costo sin beneficio.
+
+### Mapa 1 · De los números a las decisiones
+
+![Escalera de seis preguntas sobre los números: Gbps, pico, SLO, lentitud, almacenamiento y p99, cada una con su decisión](diagramas/diseno-mapa-numeros.svg)
+
+Las cuentas de cada casilla están en §2; el «por qué» de cada una, en [[design-1]] §3.3 a §3.8.
+
+### Mapa 2 · Datos, bytes y trabajo
+
+![Escalera de seis preguntas: archivos grandes, trabajo largo, lectura repetida, contador caliente, relaciones N:M y guardar y avisar](diagramas/diseno-mapa-datos-bytes.svg)
+
+Las dos casillas de datos siguen la regla del SQL por defecto: empiezas en SQL y solo sales cuando un patrón de acceso concreto lo obliga. La casilla del contador es el caso de las reproducciones: cada play es un `UPDATE` sobre la misma fila y los escritores hacen cola por el bloqueo; la salida es sacar la escritura de la fila.
+
+### Mapa 3 · Fallos, abuso y confianza
+
+![Escalera de seis preguntas: tercero que falla, petición repetible, picos y abuso, varios clientes, muchas copias y que nunca falle](diagramas/diseno-mapa-fallos-seguridad.svg)
+
+Cada «sí» de este mapa es una fila candidata de la tabla de fallos (§5): qué se rompe, qué ve el usuario y qué pieza lo contiene.
+
+### Mapa 4 · La cadena: por qué existe cada pieza
+
+![Nueve eslabones: cada pieza nace del problema que deja la anterior, desde el token firmado hasta el SLO y el presupuesto de error](diagramas/diseno-mapa-cadena.svg)
+
+Léela como una historia, no como un orden de construcción: cada caja es un problema que aparece **porque** pusiste la pieza anterior. Sirve para recordar por qué existe cada pieza y, al revés, para descartarla: si no tienes el problema de la caja, no necesitas la pieza.
+
+### De las diez preguntas a los mapas
+
+| Pregunta de §3 | Qué casilla alimenta | Qué decide |
+| --- | --- | --- |
+| 1. ¿Quién y cuántos? | Mapa 1 (Gbps, pico) y Mapa 3 (varios clientes) | CDN, dimensionar con el pico, tenant |
+| 2. ¿Qué hace exactamente? | Mapa 2 (archivos, trabajo largo, guardar y avisar) | subida directa, cola, outbox |
+| 3. ¿Cuánto se lee y escribe, de qué tamaño? | Mapa 1 (TB guardados) y Mapa 2 (lectura repetida, contador, N:M) | objetos, CDN y caché, contador, SQL |
+| 4. ¿Qué pesa más? | Mapa 1 (SLO) y Mapa 3 (que nunca falle) | redundancia, SLO y presupuesto de error |
+| 5. ¿Qué latencia es aceptable? | Mapa 1 (lentitud, p99) y Mapa 3 (muchas copias) | timeouts, atacar la cola, observabilidad |
+| 6. ¿Dónde están los usuarios? | Mapa 1 (Gbps) y §4 (regiones) | CDN; réplicas por región solo con requisito |
+| 7. ¿Hay restricciones legales o datos sensibles? | Mapa 3 (varios clientes) y §5 | tenant y amenazas; una licencia es una restricción, no una pieza |
+| 8. ¿Qué ya existe? | ninguna casilla | limita la elección: la pieza se elige con lo que ya tienes (§6) |
+| 9. ¿Qué queda fuera de alcance? | el final de cada escalera | lo que no marcaste, no lo pongas |
+| 10. ¿Qué sería un fracaso? | Mapa 3 (tercero, repetible, abuso) y §5 | la primera fila de la tabla de fallos |
+
+### Ejemplo: la plataforma de música
+
+- **Mapa 1:** sí en Gbps (21,3 Gbps de pico) → CDN y URL firmada; sí en pico (factor 3) → dimensionar con el pico; sí en TB (originales y segmentos) → almacenamiento de objetos; el SLO de 99,9 % marca la casilla solo si el requisito lo pide.
+- **Mapa 2:** sí en archivos grandes (subidas de artistas), en trabajo largo (transcodificar), en lectura repetida (lo viral), en contador (reproducciones) y en N:M (playlists); sí en guardar y avisar (canción lista y evento de aviso).
+- **Mapa 3:** sí en tercero lento (por ejemplo, un proveedor de pagos o de licencias), en petición repetible (subidas y pagos) y en picos; **no** en varios clientes: es una sola plataforma sin empresas-cliente, así que no pones el tenant.
+
+### Lo que el mapa no cubre
+
+- Las decisiones de **forma** (monolito modular o microservicios, regiones, un dato con un solo dueño) no tienen escalera: se resuelven con las tres últimas filas de §4.
+- Un mapa bien recorrido con números mal estimados da piezas de más o de menos. Por eso el mapa 1 va primero y por eso las cuentas se hacen a mano.
 
 ---
 
@@ -204,3 +270,7 @@ Regla: **no cites un servicio que no sepas justificar con una fila de números o
 ## Diagramas de esta lección
 
 - [Preflight de diseño](diagramas/diseno-preflight.svg)
+- [Mapa 1 · de los números a las decisiones](diagramas/diseno-mapa-numeros.svg)
+- [Mapa 2 · datos, bytes y trabajo](diagramas/diseno-mapa-datos-bytes.svg)
+- [Mapa 3 · fallos, abuso y confianza](diagramas/diseno-mapa-fallos-seguridad.svg)
+- [Mapa 4 · la cadena de eslabones](diagramas/diseno-mapa-cadena.svg)
