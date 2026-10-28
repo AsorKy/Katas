@@ -16,6 +16,7 @@ Práctica deliberada de programación **a mano**: katas de Python, un proyecto f
 | [`python-backend/python-basics/`](python-backend/python-basics/) | 5 katas de Python con `assert` y un notebook de pruebas | 5 katas |
 | [`fullstack-project-music/`](fullstack-project-music/) | Music API: backend FastAPI, frontend React y Docker Compose, con notas de clase y diagramas | completo |
 | Diseño de arquitectura backend | Casos de diseño por escrito; el primero, una plataforma de streaming en la nube | por añadir |
+| [`node-react/`](node-react/) | Repaso exprés de Node y React: fichas de memoria, recetas de código y retos con pruebas | en curso |
 
 ### `python-backend/python-basics/`
 

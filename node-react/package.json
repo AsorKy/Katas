@@ -1,0 +1,13 @@
+{
+  "name": "node-react",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "reto0": "node retos/00-js-basico.js",
+    "reto1": "node retos/01-async.js",
+    "reto2": "node retos/02-express.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
