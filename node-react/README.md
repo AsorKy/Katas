@@ -14,6 +14,7 @@ Preparación para la entrevista de **React y Node.js** (viernes 12:00). Todo a m
 | Archivo | Qué es |
 |---|---|
 | [`fichas/00-js-para-pythonistas.md`](fichas/00-js-para-pythonistas.md) | Traducción Python → JS y las 7 trampas del lenguaje |
+| [`fichas/00b-tipos-y-operadores.md`](fichas/00b-tipos-y-operadores.md) | Tipos de datos y operadores de JS frente a Python, con las trampas de conversión |
 | [`fichas/01-async-event-loop.md`](fichas/01-async-event-loop.md) | Event loop, promesas y por qué un cálculo largo bloquea todo |
 | [`fichas/02-express.md`](fichas/02-express.md) | Express: la tubería de middleware, errores y códigos HTTP |
 | [`recetas.md`](recetas.md) | Plantillas de código cortas para memorizar |

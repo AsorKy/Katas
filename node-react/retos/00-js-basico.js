@@ -14,29 +14,50 @@ import { chequear, resumen } from "./_util.js";
  *  más veces primero y, si empatan, orden alfabético. Si n <= 0 → [].
  *  Ojo: en JS la expresión regular \w solo entiende ASCII. */
 export function topPalabras(texto, n) {
-  throw new Error("TODO");
-}
+  if (n <= 0) {
+    return [];
+  }
+  
+  const palabras = texto.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
+  const cuenta = new Map(); 
+  for (const palabra of palabras) {
+    cuenta.set(palabra,  (cuenta.get(palabra) ?? 0) + 1)
+  }
+  
+  const pares = [...cuenta.entries()];
+  pares.sort((x,y) => y[1] - x[1] || x[0].localeCompare(y[0]));
+  return pares.slice(0,n);
+  
+};
 
 /** 2. Agrupa objetos por el valor de una clave → { valor: [objetos] }.
  *  (El defaultdict(list) de Python.) */
 export function agruparPor(items, clave) {
-  throw new Error("TODO");
-}
+  const grupos = {}
+  for (const item of items){
+    const k = item[clave]
+    if (!grupos[k]){
+      grupos[k] = []
+    }
+    grupos[k].push(item)
+  };
+  return grupos
+};
 
 /** 3. Devuelve una COPIA ordenada de menor a mayor. No modifica el original. */
 export function ordenarNumeros(xs) {
-  throw new Error("TODO");
-}
+  return [...xs].sort((a,b) => a - b)
+};
 
 /** 4. Quita repetidos conservando el orden de la primera aparición. */
 export function sinDuplicados(xs) {
-  throw new Error("TODO");
-}
+  return [...new Set(xs)]
+};
 
 /** 5. Devuelve x, salvo que sea null o undefined: entonces devuelve porDefecto.
  *  0, "" y false SON valores válidos y se conservan. */
 export function conDefecto(x, porDefecto) {
-  throw new Error("TODO");
+  return x ?? porDefecto;
 }
 
 // ───────────── PRUEBAS (no las edites) ─────────────
