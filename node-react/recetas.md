@@ -231,3 +231,77 @@ app.use((err, req, res, next) => {
 ```
 
 El service **lanza**; el manejador de errores **responde**. Por eso el router queda con una línea por ruta.
+
+## React
+
+### R11 · Estado de una lista (agregar, cambiar, borrar)
+
+Siempre con la forma de función y siempre una copia nueva:
+
+```jsx
+setTareas((ts) => [...ts, { id: siguienteId++, texto, hecha: false }]);                    // agregar
+setTareas((ts) => ts.map((t) => (t.id === id ? { ...t, hecha: !t.hecha } : t)));           // cambiar uno
+setTareas((ts) => ts.filter((t) => t.id !== id));                                           // borrar
+const pendientes = tareas.filter((t) => !t.hecha).length;                                   // derivado: se calcula
+```
+
+### R12 · Formulario controlado
+
+```jsx
+const [texto, setTexto] = useState("");
+
+function enviar(e) {
+  e.preventDefault();                       // sin esto la página se recarga
+  const limpio = texto.trim();
+  if (limpio === "") return;
+  // … usar `limpio` …
+  setTexto("");
+}
+
+<form onSubmit={enviar}>
+  <label>Nueva tarea <input value={texto} onChange={(e) => setTexto(e.target.value)} /></label>
+  <button type="submit">Agregar</button>
+</form>
+```
+
+### R13 · Cargar datos en un efecto (carga, error, cancelación)
+
+```jsx
+const [datos, setDatos] = useState([]);
+const [cargando, setCargando] = useState(true);
+const [error, setError] = useState(null);
+
+useEffect(() => {
+  const controller = new AbortController();
+  setCargando(true);
+  setError(null);
+  fetch(url, { signal: controller.signal })
+    .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    .then(setDatos)
+    .catch((e) => { if (e.name !== "AbortError") setError(e); })
+    .finally(() => { if (!controller.signal.aborted) setCargando(false); });
+  return () => controller.abort();          // cancela si url cambia o el componente se va
+}, [url]);
+
+if (cargando) return <p>Cargando…</p>;
+if (error) return <p role="alert">Error: {error.message}</p>;
+return <ul>{datos.map((d) => <li key={d.id}>{d.title}</li>)}</ul>;
+```
+
+Siempre tres estados: **cargando**, **error** y **datos**.
+
+### R14 · `useDebounce`
+
+```jsx
+function useDebounce(valor, ms = 300) {
+  const [lento, setLento] = useState(valor);
+  useEffect(() => {
+    const id = setTimeout(() => setLento(valor), ms);
+    return () => clearTimeout(id);
+  }, [valor, ms]);
+  return lento;
+}
+
+const [q, setQ] = useState("");
+const busqueda = useDebounce(q, 300);       // el efecto de R13 depende de `busqueda`, no de `q`
+```

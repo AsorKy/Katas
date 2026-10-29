@@ -1,0 +1,21 @@
+{
+  "name": "react-retos",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "reto3": "vitest run retos/03-estado.test.jsx",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.0",
+    "jsdom": "^26.0.0",
+    "vitest": "^3.0.0"
+  }
+}
