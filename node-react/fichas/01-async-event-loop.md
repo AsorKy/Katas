@@ -30,6 +30,39 @@ el sistema operativo hace la espera  →  avisa  →  fila de espera  →  tu fu
 
 El hilo nunca espera. Por eso Node aguanta miles de conexiones abiertas. Pero si **tu** código ocupa el hilo, nadie más avanza.
 
+## Promesas en un minuto
+
+Una **Promesa** es un vale: «tu resultado llegará después». En Python se parece a un `Future`.
+
+Tiene tres estados: **pendiente** → **cumplida** (con un valor) o **rechazada** (con un error).
+
+```js
+// Crear una: llamar a resolver(valor) = «ya terminó, aquí está el valor»
+const p = new Promise((resolver, rechazar) => {
+  setTimeout(() => resolver("listo"), 1000);   // dentro de 1 s se cumple
+});
+
+// Usarla, dos formas equivalentes:
+p.then((valor) => console.log(valor));          // con .then
+const valor = await p;                          // con await (más cómodo)
+
+Promise.resolve(42);                            // una promesa que ya nace cumplida
+```
+
+`setTimeout(f, ms)` ejecuta `f` cuando pasan `ms` milisegundos. `process.nextTick(f)` (solo Node) ejecuta `f` lo antes posible, justo al terminar lo que está corriendo y antes que las promesas.
+
+## El orden, paso a paso
+
+```js
+console.log("1");                                  // sale YA: 1
+setTimeout(() => console.log("2"), 0);             // agenda el 2 en la fila de timers
+Promise.resolve().then(() => console.log("3"));    // agenda el 3 en la fila de promesas
+process.nextTick(() => console.log("4"));          // agenda el 4 en la fila de nextTick
+console.log("5");                                  // sale YA: 5
+```
+
+Al terminar el código normal, el hilo vacía las filas en este orden: nextTick (4), promesas (3), timers (2). Salida: **1, 5, 4, 3, 2** (en CommonJS; en un módulo ES sale 1, 5, 3, 4, 2).
+
 ## Qué se rompe sin esto
 
 1. **Un endpoint con 3 s de CPU:** durante esos 3 s nadie más recibe respuesta (un solo mesero).
