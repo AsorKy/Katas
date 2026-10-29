@@ -19,32 +19,46 @@ import { chequear, resumen } from "./_util.js";
 
 /** 1. Devuelve una promesa que se cumple (con undefined) después de `ms` milisegundos. */
 export function esperar(ms) {
-  throw new Error("TODO");
-}
+  return new Promise((resolver) => setTimeout(resolver, ms))
+};
 
 /** 2. `tareas` es un arreglo de funciones async (sin argumentos).
  *  Ejecútalas UNA tras otra y devuelve los resultados en el mismo orden. */
 export async function enSerie(tareas) {
-  throw new Error("TODO");
+  const resultados= [];
+  for (const tarea of tareas) {
+    resultados.push(await tarea());
+  };
+  return resultados;
 }
 
 /** 3. Ejecuta todas A LA VEZ y devuelve los resultados en el orden de `tareas`
  *  (no en el orden en que terminan). */
 export async function enParalelo(tareas) {
-  throw new Error("TODO");
+  const promesas = await Promise.all(tareas.map(tarea => tarea()));
+  return promesas;
 }
 
 /** 4. Si `promesa` termina antes de `ms`, devuelve su valor.
  *  Si no, rechaza con new Error("timeout"). */
 export async function conTimeout(promesa, ms) {
-  throw new Error("TODO");
+  const limite = new Promise((_, rechazar)=> setTimeout(()=> rechazar(new Error("timeout")), ms));
+  return Promise.race([promesa, limite]);
 }
 
 /** 5. Llama a `fn` hasta `n` veces EN TOTAL. Devuelve el primer éxito.
  *  Si las n veces fallan, lanza el ÚLTIMO error. */
 export async function conReintentos(fn, n) {
-  throw new Error("TODO");
-}
+  let ultimo;
+  for (let i = 0; i < n; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      ultimo = e;
+    }
+  };
+  throw ultimo;
+};
 
 // ───────────── PRUEBAS (no las edites) ─────────────
 

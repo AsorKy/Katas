@@ -164,3 +164,70 @@ console.log(res.status, await res.json());
 
 servidor.close();
 ```
+
+## Estructura por capas
+
+### R10 · Router → service → repo (como en FastAPI)
+
+Misma idea que en Python: el router solo traduce HTTP, el service decide, el repo guarda. Cada capa recibe a la de abajo como argumento (así se puede probar con un repo falso).
+
+| Python | JS |
+|---|---|
+| `APIRouter` | `express.Router()` |
+| `HTTPException(404, ...)` | `throw new ErrorHttp(404, ...)` |
+| `Depends(get_service)` | pasar el service como argumento |
+| `app.include_router(r, prefix="/tracks")` | `app.use("/tracks", r)` |
+
+```js
+// errores.js · un error que sabe su status
+export class ErrorHttp extends Error {
+  constructor(status, code, message) { super(message); this.status = status; this.code = code; }
+}
+
+// tracks.repo.js · solo guarda y busca, no sabe de HTTP
+export function crearRepo() {
+  const tracks = []; let siguiente = 1;
+  return {
+    listar: () => tracks,
+    buscar: (id) => tracks.find((t) => t.id === id),
+    crear: ({ title, artist }) => { const t = { id: siguiente++, title, artist }; tracks.push(t); return t; },
+  };
+}
+
+// tracks.service.js · reglas: valida, decide, lanza errores
+export function crearService(repo) {                 // recibe el repo
+  return {
+    obtener(id) {
+      const t = repo.buscar(id);
+      if (!t) throw new ErrorHttp(404, "not_found", "track no encontrado");
+      return t;
+    },
+    crear({ title, artist }) {
+      if (!esTexto(title) || !esTexto(artist)) throw new ErrorHttp(400, "validation_error", "…");
+      return repo.crear({ title, artist });
+    },
+  };
+}
+
+// tracks.router.js · traduce req → service → res, sin reglas ni datos
+export function crearRouter(service) {
+  const r = express.Router();
+  r.get("/:id", (req, res) => res.json(service.obtener(Number(req.params.id))));
+  r.post("/", (req, res) => {
+    const t = service.crear(req.body ?? {});
+    res.status(201).location(`/tracks/${t.id}`).json(t);
+  });
+  return r;
+}
+
+// app.js · ensambla (repo → service → router)
+const service = crearService(crearRepo());
+app.use("/tracks", crearRouter(service));            // en el router, "/" significa "/tracks"
+// … 404, y al final el manejador de errores:
+app.use((err, req, res, next) => {
+  if (err instanceof ErrorHttp) return res.status(err.status).json(falla(req, err.code, err.message));
+  // … bad_json y 500 como en R2
+});
+```
+
+El service **lanza**; el manejador de errores **responde**. Por eso el router queda con una línea por ruta.

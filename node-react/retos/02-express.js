@@ -31,14 +31,90 @@ import express from "express";
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { chequear, resumen } from "./_util.js";
+import {randomUUID} from "node:crypto";
 
 // ───────────── TU CÓDIGO ─────────────
 
-export function crearApp() {
+
+const esTexto = (v) => typeof v === "string" && v.trim() !== ""
+const falla = (req, code, message) => ({error: {code, message, request_id: req.id}});
+
+export function crearApp(){
   const app = express();
-  // TODO
+  const tracks = [];
+  let siguiente = 1;
+
+  app.use((req, res, next) => {
+    req.id = randomUUID();
+    res.setHeader("X-Request-Id", req.id);
+    next();
+  });
+
+  app.use(express.json());
+
+  app.get("/tracks", (req, res) => {res.json(tracks)});
+
+  app.post("/tracks", (req, res) => {
+    const {title, artist} = req.body ?? {}
+    if (!esTexto(title)|| !esTexto(artist)){
+      return res.status(400).json(
+        falla(req, "validation_error", "title and artist are required")
+      );
+    };
+
+    const track = {id: siguiente++, title, artist};
+    tracks.push(track)
+    
+    res.status(201).location(`/tracks/${track.id}`).json(track)
+
+  });
+
+
+  app.get("/tracks/:id", (req, res) => {
+
+    const id = Number(req.params.id);
+    const track = tracks.find((t) => t.id === id)
+    if (!track) {
+      return res.status(404).json(falla(req, "not_found", "track no encontrado"));
+    }
+    res.json(track);
+
+  });
+
+  app.delete("/tracks/:id", (req, res) => {
+    const id = Number(req.params.id);
+    const i = tracks.findIndex((t) => t.id ===id );
+    if (i === -1){
+      return res.status(404).json(
+        falla(req, "not_found", "track no encontrado"));
+    }
+    tracks.splice(i, 1);
+    res.status(204).end()
+  });
+
+  app.get("/boom", (req, res) => {
+    throw new Error("secreto-interno");
+  });
+
+  app.get("/boom-async", async (req,res) =>{
+    await Promise.resolve();
+    throw new Error("secreto-interno");
+  });
+
+  app.use((req, res) => res.status(404).json(falla(req, "not_found", "ruta no encontrada")));
+
+  app.use((err, req, res, next) => {
+    if (err.type === "entity.parse.failed"){
+      return res.status(400).json(falla(req, "bad_json", "JSON mal formado"));
+    }
+    console.error(err);
+    res.status(500).json(falla(req, "internal_error", "error interno"))
+  });
+
+
   return app;
-}
+};
+
 
 // ───────────── PRUEBAS (no las edites) ─────────────
 
