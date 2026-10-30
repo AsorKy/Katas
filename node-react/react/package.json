@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "reto3": "vitest run retos/03-estado.test.jsx",
+    "reto4": "vitest run retos/04-componentes-tipicos.test.jsx",
+    "reto5": "vitest run retos/05-estilos.test.jsx",
     "test": "vitest run"
   },
   "dependencies": {

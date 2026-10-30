@@ -25,11 +25,77 @@
 // Pista de estructura: export function Contador(...) { ... }   export function ListaTareas({ inicial = [] }) { ... }
 
 // ───────────── TU CÓDIGO ─────────────
+import { useState } from "react";
 
 export function Contador({ inicial = 0 }) {
-  return null;
+  const [n, setN] = useState(inicial);
+
+  const sumarUno = () => setN((actual) => actual + 1);
+
+  return (
+    <div>
+      <p>Cuenta: {n}</p>
+      <button onClick={sumarUno}>+1</button>
+      <button onClick={() => setTimeout(sumarUno, 1000)}>+1 en 1 s</button>
+      <button onClick={() => setN(inicial)}>Reiniciar</button>
+    </div>
+  );
 }
 
+
+let siguienteID = 1;
+
 export function ListaTareas({ inicial = [] }) {
-  return null;
+  const [tareas, setTareas] = useState(inicial);
+  const [texto, setTexto] = useState("");
+  
+  function agregar(e) {
+    e.preventDefault();
+    const limpio = texto.trim();
+    if(limpio === "") return;
+    setTareas((tareas)=> [...tareas, {id: siguienteID++ , texto: limpio, hecha: false}] );
+    setTexto("")
+  };
+
+  const alterar = (id) => setTareas(
+    (ts) => ts.map(
+      (t) => (t.id === id ? {... t, hecha: !t.hecha} : t)
+    )
+  );
+
+  const borrar = (id) => setTareas(
+    (ts) => ts.filter((t)=> t.id !==id)
+  );
+
+  const pendientes = tareas.filter((ts)=>ts.hecha ===false).length;
+
+  return (
+    <div>
+      <form onSubmit={agregar}>
+        <label>
+          Nueva tarea 
+          <input value={texto} onChange={(e)=> setTexto(e.target.value) }/>
+        </label>
+        <button type="submit">Agregar</button>
+      </form>
+      <p>Pendientes: {pendientes}</p>
+      <ul>
+        {
+          tareas.map(
+            (t) => (
+              <li key={t.id}>
+                <label>
+                  <input type="checkbox" checked={t.hecha} onChange={() => alterar(t.id)}/>
+                  {t.texto}
+                </label>
+                <input aria-label={`Nota de ${t.texto}`}/>
+                <button aria-label={`Borrar ${t.texto}`} onClick={()=> borrar(t.id)}>x</button>
+              </li>
+            )
+          )
+        }
+      </ul>
+    </div>
+  )
+
 }
