@@ -19,11 +19,14 @@ Preparación para la entrevista de **React y Node.js** (viernes 12:00). Todo a m
 | [`fichas/02-express.md`](fichas/02-express.md) | Express: la tubería de middleware, errores y códigos HTTP |
 | [`fichas/03-http-cors-contrasenas.md`](fichas/03-http-cors-contrasenas.md) | Parámetros, códigos HTTP, idempotencia, CORS y contraseñas |
 | [`fichas/04-react-estado-y-efectos.md`](fichas/04-react-estado-y-efectos.md) | React: estado como foto fija, copiar sin mutar, `key`, formularios, efectos y hooks propios |
+| [`fichas/05-react-estilos.md`](fichas/05-react-estilos.md) | React: `className`, CSS global/Modules/Tailwind, `style` en línea, clases condicionales, Flexbox, Grid y accesibilidad mínima |
 | [`recetas.md`](recetas.md) | Plantillas de código cortas para memorizar |
 | `retos/00-js-basico.js` | Cinco funciones: Map, agrupar, ordenar, `??` |
 | `retos/01-async.js` | `esperar`, serie, paralelo, timeout, reintentos |
 | `retos/02-express.js` | API de canciones con validación, errores y `X-Request-Id` |
 | `react/retos/03-estado.jsx` | Contador y lista de tareas: estado, `key`, formulario controlado (con pruebas) |
+| `react/retos/04-componentes-tipicos.jsx` | Buscador con debounce y carreras, lista paginada y detalle: los componentes típicos de una prueba (con pruebas, ~75 min) |
+| `react/retos/05-estilos.jsx` | `Boton`, `Tarjeta` y `Cuadricula`: clases condicionales, estilo en línea y Grid (con pruebas, ~20 min) |
 | `retos/simulacro-node.js` | Simulacro de 60 min: API de libros con paginación, autenticación 401/403 y servicio externo con timeout y reintento |
 
 ## Cómo se corre
@@ -42,9 +45,11 @@ Un reto está resuelto cuando el resumen dice que todos los chequeos están OK.
 cd node-react/react
 npm install                       # una sola vez
 npm run reto3                     # ✓ por cada prueba que pasa, × con el motivo en las que fallan
+npm run reto4                     # buscador, lista paginada y detalle
+npm run reto5                     # estilos
 ```
 
-Escribes tu código en `react/retos/03-estado.jsx`; el archivo `.test.jsx` no se toca.
+Escribes tu código en `react/retos/0N-….jsx`; el archivo `.test.jsx` de al lado no se toca.
 
 ## Calendario
 

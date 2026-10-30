@@ -305,3 +305,61 @@ function useDebounce(valor, ms = 300) {
 const [q, setQ] = useState("");
 const busqueda = useDebounce(q, 300);       // el efecto de R13 depende de `busqueda`, no de `q`
 ```
+
+## Estilos
+
+### R15 · Clase condicional
+
+```jsx
+const clases = ["btn", `btn--${variante}`, activo && "is-activo"].filter(Boolean).join(" ");
+// "btn btn--primario is-activo"   (sin "false" ni "undefined")
+
+<button type="button" className={clases} disabled={deshabilitado}>{children}</button>
+```
+
+### R16 · Flexbox: centrar y fila con hueco
+
+```css
+.centrado { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+.fila     { display: flex; gap: 12px; align-items: center; }
+```
+
+### R17 · Rejilla de tarjetas responsive (sin media queries)
+
+```css
+.tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+```
+
+### R18 · CSS Module de ejemplo
+
+```css
+/* Tarjeta.module.css */
+:root { --acento: #4f46e5; --borde: #e5e7eb; }
+.tarjeta { padding: 16px; border: 1px solid var(--borde); border-radius: 8px; }
+.tarjeta:hover { box-shadow: 0 2px 8px rgb(0 0 0 / 0.15); }
+.activa { border-color: var(--acento); }
+```
+```jsx
+import estilos from "./Tarjeta.module.css";
+
+export function Tarjeta({ activa, children }) {
+  const clases = [estilos.tarjeta, activa && estilos.activa].filter(Boolean).join(" ");
+  return <div className={clases}>{children}</div>;
+}
+```
+`estilos.tarjeta` se convierte en un nombre único (`Tarjeta_tarjeta__x7f2a`), por eso no choca con otros archivos.
+
+### R19 · Cancelar **y además** ignorar lo que llega tarde
+
+R13 cancela con `AbortController`. Si el servicio no respeta la señal (o responde justo antes de cancelar), la respuesta vieja igual llega. Cinturón y tirantes:
+
+```jsx
+useEffect(() => {
+  const controller = new AbortController();
+  buscar(q, { signal: controller.signal })
+    .then((datos) => { if (controller.signal.aborted) return; setDatos(datos); })     // ignora lo tardío
+    .catch((e) => { if (controller.signal.aborted || e.name === "AbortError") return; setError(e); });
+  return () => controller.abort();
+}, [q]);
+```
+Cuando la función de datos **no** recibe señal (como `cargar(id)`), usa una bandera: `let ignorar = false; … if (!ignorar) setX(…); return () => { ignorar = true; };`
